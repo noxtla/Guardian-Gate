@@ -2,44 +2,96 @@
 
 import { ThemedText } from '@/components/ThemedText';
 import { Colors } from '@/constants/Colors';
-import { router } from 'expo-router';
-import React from 'react';
-import {
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  View,
-  TextInput,
-} from 'react-native';
-// --- CAMBIO CLAVE: Importar estilos globales ---
+import React, { useState, useMemo } from 'react';
+import { StyleSheet, TouchableOpacity, SafeAreaView, View, Text } from 'react-native';
 import { globalStyles } from '@/constants/AppStyles';
+import { router } from 'expo-router';
+
+// --- Datos y Funciones Auxiliares ---
+const MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+];
+const isLeapYear = (year: number): boolean => ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0);
+const getDaysInMonth = (monthIndex: number, year: number): number => {
+  if (monthIndex === 1) return isLeapYear(year) ? 29 : 28;
+  if ([3, 5, 8, 10].includes(monthIndex)) return 30;
+  return 31;
+};
 
 export default function DobScreen() {
-  return (
-    <SafeAreaView style={globalStyles.lightScreenContainer}>
-      <View style={styles.container}>
-        <View style={styles.content}>
-          <ThemedText style={styles.title}>Date of Birth</ThemedText>
-          <ThemedText style={styles.subtitle}>
-            Please enter your date of birth to continue.
-          </ThemedText>
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            maxLength={10} // MM/DD/YYYY
-            placeholder="MM/DD/YYYY"
-            placeholderTextColor={Colors.brand.gray}
-          />
+  // Usa el año actual solo para calcular los días de febrero correctamente.
+  const currentYear = new Date().getFullYear();
+  const daysInMonth = useMemo(
+    () => selectedMonth !== null ? getDaysInMonth(selectedMonth, currentYear) : 31,
+    [selectedMonth, currentYear]
+  );
+  const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  const isFormValid = selectedMonth !== null && selectedDay !== null;
+
+  return (
+    <SafeAreaView style={globalStyles.darkScreenContainer}>
+      <View style={styles.container}>
+        {/* El contenido principal ya no tiene scroll */}
+        <View>
+          <View style={styles.progressContainer}>
+            <Text style={styles.progressText}>2/3</Text>
+            <View style={styles.progressBarBackground}>
+              <View style={[styles.progressBarFill, { width: '66.6%' }]} />
+            </View>
+          </View>
+
+          <ThemedText style={styles.sectionTitle}>Month</ThemedText>
+          <View style={styles.gridContainer}>
+            {MONTHS.map((month, index) => (
+              <TouchableOpacity
+                key={month}
+                style={[
+                  styles.gridButton, { minWidth: '22%' },
+                  selectedMonth === index ? styles.selectedButton : styles.unselectedButton,
+                ]}
+                onPress={() => setSelectedMonth(index)}
+              >
+                <Text style={selectedMonth === index ? styles.selectedButtonText : styles.unselectedButtonText}>
+                  {month}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <ThemedText style={styles.sectionTitle}>Day</ThemedText>
+          <View style={styles.gridContainer}>
+            {daysArray.map((day) => (
+              <TouchableOpacity
+                key={day}
+                style={[
+                  styles.gridButton, { minWidth: '12.5%' },
+                  selectedDay === day ? styles.selectedButton : styles.unselectedButton,
+                ]}
+                onPress={() => setSelectedDay(day)}
+              >
+                <Text style={selectedDay === day ? styles.selectedButtonText : styles.unselectedButtonText}>
+                  {day}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
-        <TouchableOpacity
-          style={globalStyles.primaryButton} // Usar estilo global
-          onPress={() => alert('Authentication logic goes here!')}>
-          <ThemedText style={globalStyles.primaryButtonText}>
-            Verify and Enter
-          </ThemedText>
-        </TouchableOpacity>
+        {/* El footer ahora sigue directamente al contenido anterior */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[globalStyles.primaryButton, !isFormValid && globalStyles.disabledButton]}
+            disabled={!isFormValid}
+            onPress={() => router.push('/year')}
+          >
+            <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -47,37 +99,70 @@ export default function DobScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    padding: 20,
+    // --- CAMBIO CLAVE: Se eliminan flex y justifyContent ---
+    // El contenedor ahora simplemente envuelve su contenido.
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  progressContainer: {
+    marginBottom: 24,
+  },
+  progressText: {
+    alignSelf: 'flex-end',
+    color: Colors.brand.gray,
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  progressBarBackground: {
+    height: 8,
+    width: '100%',
+    backgroundColor: Colors.brand.darkGray,
+    borderRadius: 4,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: Colors.brand.lightBlue,
+    borderRadius: 4,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.brand.white,
+    marginBottom: 16,
+    marginTop: 16,
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
+  gridButton: {
+    paddingVertical: 12,
     paddingHorizontal: 10,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 40,
-    color: Colors.brand.darkBlue,
+    borderRadius: 8,
     marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  subtitle: {
-    fontSize: 16,
-    color: Colors.brand.darkGray,
-    marginBottom: 40,
+  unselectedButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
-  input: {
-    fontSize: 24,
+  unselectedButtonText: {
+    color: Colors.brand.white,
+    fontWeight: '500',
+  },
+  selectedButton: {
+    backgroundColor: Colors.brand.lightBlue,
+  },
+  selectedButtonText: {
+    color: Colors.brand.white,
     fontWeight: 'bold',
-    letterSpacing: 2,
-    textAlign: 'center',
-    borderBottomWidth: 2,
-    borderColor: Colors.brand.lightGray,
+  },
+  footer: {
+    // --- CAMBIO CLAVE: Se añade un margen superior ---
+    // Esto crea el espacio deseado después de la cuadrícula de días.
+    marginTop: 40,
+    paddingBottom: 20,
     width: '100%',
-    color: Colors.brand.darkBlue,
-    paddingBottom: 10,
   },
 });

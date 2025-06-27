@@ -1,13 +1,10 @@
-// app/ssn.tsx
+// app/year.tsx
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
-import { router } from 'expo-router';
 import { useState } from 'react';
 import {
-  StyleSheet,
   TouchableOpacity,
   SafeAreaView,
   TextInput,
@@ -16,47 +13,47 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
 } from 'react-native';
-
-// --- CAMBIO CLAVE: Importar estilos globales ---
 import { globalStyles } from '@/constants/AppStyles';
+import { IconSymbol } from '@/components/ui/IconSymbol';
 
-export default function SsnScreen() {
-  const [ssn, setSsn] = useState('');
-  const isSsnValid = ssn.length === 4;
+export default function YearScreen() {
+  const [year, setYear] = useState('');
+  const isYearValid = year.length === 4;
 
   return (
     <SafeAreaView style={globalStyles.darkScreenContainer}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ThemedView style={globalStyles.contentContainer}>
-            <IconSymbol name="shield.fill" size={150} color={Colors.brand.lightBlue} />
+            <IconSymbol name="paperplane.fill" size={150} color={Colors.brand.lightBlue} />
 
             <TextInput
-              style={globalStyles.textInput} // Usar estilo global
-              placeholder="Last 4 of SSN"
+              style={globalStyles.textInput}
+              placeholder="YYYY"
               placeholderTextColor={Colors.brand.gray}
               keyboardType="number-pad"
-              value={ssn}
-              onChangeText={setSsn}
+              value={year}
+              onChangeText={setYear}
               maxLength={4}
-              secureTextEntry
             />
 
             <TouchableOpacity
               style={[
                 globalStyles.primaryButton,
-                !isSsnValid && globalStyles.disabledButton,
+                !isYearValid && globalStyles.disabledButton,
               ]}
-              disabled={!isSsnValid}
-              onPress={() => router.push('/dob')}>
-              <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>
+              disabled={!isYearValid}
+              onPress={() => alert(`Sign-up complete! Year: ${year}`)}
+            >
+              <ThemedText style={globalStyles.primaryButtonText}>Confirm</ThemedText>
             </TouchableOpacity>
 
             <ThemedText style={globalStyles.infoText}>
-              For currently active employees only.{'\n'}Any fraudulent activity will be
-              penalized.
+              Please enter your four-digit year of birth to complete verification.
             </ThemedText>
           </ThemedView>
         </TouchableWithoutFeedback>
@@ -64,4 +61,3 @@ export default function SsnScreen() {
     </SafeAreaView>
   );
 }
-// Ya no se necesita un StyleSheet local para esta pantalla
