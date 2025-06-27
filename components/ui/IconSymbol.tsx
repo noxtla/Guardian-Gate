@@ -19,6 +19,8 @@ const MAPPING = {
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
   'shield.fill': 'security',
+  // --- CAMBIO CLAVE: Se añade el nuevo ícono para el SMS/OTC ---
+  'message.fill': 'sms', 
 } as IconMapping;
 
 /**

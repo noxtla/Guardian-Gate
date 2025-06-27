@@ -36,12 +36,11 @@ export default function DobScreen() {
   return (
     <SafeAreaView style={globalStyles.darkScreenContainer}>
       <View style={styles.container}>
-        {/* El contenido principal ya no tiene scroll */}
         <View>
           <View style={styles.progressContainer}>
-            <Text style={styles.progressText}>2/3</Text>
+            <Text style={styles.progressText}>3/4</Text>
             <View style={styles.progressBarBackground}>
-              <View style={[styles.progressBarFill, { width: '66.6%' }]} />
+              <View style={[styles.progressBarFill, { width: '75%' }]} />
             </View>
           </View>
 
@@ -82,7 +81,6 @@ export default function DobScreen() {
           </View>
         </View>
 
-        {/* El footer ahora sigue directamente al contenido anterior */}
         <View style={styles.footer}>
           <TouchableOpacity
             style={[globalStyles.primaryButton, !isFormValid && globalStyles.disabledButton]}
@@ -99,8 +97,6 @@ export default function DobScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    // --- CAMBIO CLAVE: Se eliminan flex y justifyContent ---
-    // El contenedor ahora simplemente envuelve su contenido.
     paddingHorizontal: 20,
     paddingTop: 10,
   },
@@ -159,8 +155,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   footer: {
-    // --- CAMBIO CLAVE: Se añade un margen superior ---
-    // Esto crea el espacio deseado después de la cuadrícula de días.
     marginTop: 40,
     paddingBottom: 20,
     width: '100%',
