@@ -2,6 +2,7 @@
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import {
   TouchableOpacity,
@@ -18,11 +19,9 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 export default function BiometricScreen() {
 
   const handleConfirm = () => {
-    Alert.alert(
-      "Registration Complete",
-      "Your identity has been successfully verified.",
-      [{ text: "OK" }]
-    );
+    // Usamos 'replace' para navegar a la nueva sección y limpiar el historial de login.
+    // Esto evita que el usuario pueda presionar "atrás" y volver a las pantallas de autenticación.
+    router.replace('/(tabs)');
   };
 
   return (
