@@ -35,8 +35,7 @@ export default function RootLayout() {
             },
             headerTitleAlign: 'center',
             headerShadowVisible: false,
-            // --- CAMBIO CLAVE: Esta es la propiedad corregida que no da error ---
-            headerBackTitle: ' ', // Oculta el título de regreso de forma compatible
+            headerBackTitle: ' ', 
           }}>
           <Stack.Screen
             name="index"
@@ -50,19 +49,13 @@ export default function RootLayout() {
               title: 'Enter your SSN',
             }}
           />
+          {/* --- CAMBIO CLAVE --- */}
+          {/* Se eliminan los estilos de header específicos para 'dob' */}
+          {/* para que herede los estilos por defecto del Stack, igual que 'ssn'. */}
           <Stack.Screen
             name="dob"
             options={{
               title: 'Date of Birth',
-              headerStyle: {
-                backgroundColor: Colors.brand.white,
-              },
-              headerTintColor: Colors.brand.darkBlue,
-              headerTitleStyle: {
-                color: Colors.brand.darkBlue,
-                fontWeight: 'bold',
-                fontSize: 22,
-              },
             }}
           />
         </Stack>
