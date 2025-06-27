@@ -5,25 +5,37 @@ import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
 import { ComponentProps } from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
-type IconMapping = Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>;
-type IconSymbolName = keyof typeof MAPPING;
+type IconMapping = Record<string, ComponentProps<typeof MaterialIcons>['name']>;
 
 /**
- * Add your SF Symbols to Material Icons mappings here.
- * - see Material Icons in the [Icons Directory](https://icons.expo.fyi).
- * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
+ * THIS IS OUR SINGLE SOURCE OF TRUTH FOR ICONS.
+ * - Keys are SF Symbol names (for iOS).
+ * - Values are Material Icons names (for Android/Web).
+ * - All icons used in the app MUST be defined here.
  */
-const MAPPING = {
+const MAPPING: IconMapping = {
+  // --- LÍNEA AÑADIDA ---
+  'shield.fill': 'security', // Icon for login/security screens
+
+  // Tab Bar Icons
   'house.fill': 'home',
-  'paperplane.fill': 'send',
-  'chevron.left.forwardslash.chevron.right': 'code',
-  'chevron.right': 'chevron-right',
-  'shield.fill': 'security',
   'message.fill': 'sms',
   'bell.fill': 'notifications',
   'person.fill': 'person',
-  'camera.fill': 'photo-camera', // <-- AÑADE ESTA LÍNEA
-} as IconMapping;
+
+  // Header Icon
+  'camera.fill': 'photo-camera',
+
+  // Home Screen Grid Icons
+  'person.badge.clock.fill': 'badge', // Attendance
+  'car.fill': 'directions-car', // Vehicles
+  'list.bullet.clipboard.fill': 'assignment', // Job Briefing
+  'heart.shield.fill': 'health-and-safety', // Safety
+  'wrench.and.screwdriver.fill': 'build', // Work
+  'exclamationmark.bubble.fill': 'support-agent', // Ticket (Support)
+};
+
+export type IconSymbolName = keyof typeof MAPPING;
 
 /**
  * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.
@@ -42,5 +54,8 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
+  if (!MAPPING[name]) {
+    return null;
+  }
   return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
 }

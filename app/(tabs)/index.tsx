@@ -3,29 +3,43 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { globalStyles } from '@/constants/AppStyles';
 import { Colors } from '@/constants/Colors';
+import { IconSymbol, IconSymbolName } from '@/components/ui/IconSymbol';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+
+interface MenuItemData {
+  key: string;
+  title: string;
+  icon: IconSymbolName; 
+}
+
+const menuItems: MenuItemData[] = [
+  { key: '1', title: 'Attendance', icon: 'person.badge.clock.fill' },
+  { key: '2', title: 'Vehicles', icon: 'car.fill' },
+  { key: '3', title: 'Job Briefing', icon: 'list.bullet.clipboard.fill' },
+  { key: '4', title: 'Safety', icon: 'heart.shield.fill' },
+  { key: '5', title: 'Work', icon: 'wrench.and.screwdriver.fill' },
+  { key: '6', title: 'Ticket', icon: 'exclamationmark.bubble.fill' },
+];
+
+const MenuItem = ({ item }: { item: MenuItemData }) => (
+  <TouchableOpacity style={styles.menuButton} activeOpacity={0.7}>
+    <IconSymbol name={item.icon} size={48} color={Colors.brand.darkBlue} />
+    <ThemedText style={styles.menuButtonText}>{item.title}</ThemedText>
+  </TouchableOpacity>
+);
 
 export default function HomeScreen() {
   return (
-    <ThemedView style={[globalStyles.darkScreenContainer, styles.container]}>
-      <View style={styles.menuContainer}>
-        <TouchableOpacity style={styles.menuButton} activeOpacity={0.7}>
-          <ThemedText style={styles.menuButtonText}>Attendance</ThemedText>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuButton} activeOpacity={0.7}>
-          <ThemedText style={styles.menuButtonText}>Vehicles</ThemedText>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuButton} activeOpacity={0.7}>
-          <ThemedText style={styles.menuButtonText}>Job Briefing</ThemedText>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuButton} activeOpacity={0.7}>
-          <ThemedText style={styles.menuButtonText}>Safety</ThemedText>
-        </TouchableOpacity>
-      </View>
+    <ThemedView style={[globalStyles.lightScreenContainer, styles.container]}>
+      <FlatList
+        data={menuItems}
+        renderItem={({ item }) => <MenuItem item={item} />}
+        keyExtractor={item => item.key}
+        numColumns={2}
+        contentContainerStyle={styles.menuContainer}
+        scrollEnabled={false}
+      />
     </ThemedView>
   );
 }
@@ -33,26 +47,36 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 10,
+    paddingTop: 20,
+    backgroundColor: Colors.brand.lightGray, // Set a light gray background like the image
   },
   menuContainer: {
-    width: '100%',
-    gap: 20, // Espacio entre los botones
+    justifyContent: 'center',
   },
   menuButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)', // Un fondo semi-transparente
-    paddingVertical: 25,
-    paddingHorizontal: 20,
-    borderRadius: 15,
+    backgroundColor: Colors.brand.white, // White background for the buttons
+    flex: 1,
+    margin: 10,
+    height: 150,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.brand.darkGray,
+    borderRadius: 20, // More rounded corners
+    padding: 10,
+    // Adding subtle shadow for depth
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   menuButtonText: {
-    color: Colors.brand.white,
-    fontSize: 20,
+    color: Colors.brand.darkBlue,
+    fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'SpaceMono',
+    marginTop: 12,
   },
 });
