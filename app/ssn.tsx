@@ -9,7 +9,6 @@ import { useState } from 'react';
 import {
   StyleSheet,
   TouchableOpacity,
-  useColorScheme,
   SafeAreaView,
   TextInput,
   KeyboardAvoidingView,
@@ -18,25 +17,23 @@ import {
   Keyboard,
 } from 'react-native';
 
+// --- CAMBIO CLAVE: Importar estilos globales ---
+import { globalStyles } from '@/constants/AppStyles';
+
 export default function SsnScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const colors = colorScheme === 'dark' ? Colors.dark : Colors.light;
   const [ssn, setSsn] = useState('');
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: Colors.brand.darkBlue }]}>
+    <SafeAreaView style={globalStyles.darkScreenContainer}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <ThemedView style={[styles.container, { backgroundColor: Colors.brand.darkBlue }]}>
-            <ThemedText style={styles.header}>Enter your SSN</ThemedText>
-
+          <ThemedView style={globalStyles.contentContainer}>
             <IconSymbol name="shield.fill" size={150} color={Colors.brand.lightBlue} />
 
             <TextInput
-              style={styles.input}
+              style={globalStyles.textInput} // Usar estilo global
               placeholder="SSN"
               placeholderTextColor={Colors.brand.gray}
               keyboardType="number-pad"
@@ -45,12 +42,15 @@ export default function SsnScreen() {
               maxLength={9}
             />
 
-            <TouchableOpacity style={styles.button} onPress={() => router.push('/dob')}>
-              <ThemedText style={styles.buttonText}>Continue</ThemedText>
+            <TouchableOpacity
+              style={globalStyles.primaryButton} // Usar estilo global
+              onPress={() => router.push('/dob')}>
+              <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>
             </TouchableOpacity>
 
-            <ThemedText style={styles.footerText}>
-              For currently active employees only.{'\n'}Any fraudulent activity will be penalized.
+            <ThemedText style={globalStyles.infoText}>
+              For currently active employees only.{'\n'}Any fraudulent activity will be
+              penalized.
             </ThemedText>
           </ThemedView>
         </TouchableWithoutFeedback>
@@ -58,65 +58,4 @@ export default function SsnScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 30,
-  },
-  header: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: Colors.brand.white,
-    marginTop: 20,
-  },
-  input: {
-    backgroundColor: Colors.brand.white,
-    width: '100%',
-    padding: 15,
-    borderRadius: 10,
-    fontSize: 18,
-    color: Colors.brand.darkGray,
-    textAlign: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  button: {
-    backgroundColor: Colors.brand.lightBlue,
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 30,
-    width: '100%',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  buttonText: {
-    color: Colors.brand.white,
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  footerText: {
-    fontSize: 12,
-    color: Colors.brand.gray,
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-});
+// Ya no se necesita un StyleSheet local para esta pantalla
