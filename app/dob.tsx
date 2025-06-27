@@ -2,22 +2,12 @@
 
 import { ThemedText } from '@/components/ThemedText';
 import { Colors } from '@/constants/Colors';
-import React, { useState, useMemo, useEffect } from 'react';
-import {
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  View,
-  TextInput,
-  ScrollView,
-  Text,
-  // --- CAMBIO CLAVE: Importaciones necesarias para manejar el teclado ---
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { StyleSheet, TouchableOpacity, SafeAreaView, View, Text } from 'react-native';
 import { globalStyles } from '@/constants/AppStyles';
+import { router } from 'expo-router';
 
-// --- Datos y Funciones Auxiliares (sin cambios) ---
+// --- Datos y Funciones Auxiliares ---
 const MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
@@ -30,31 +20,24 @@ const getDaysInMonth = (monthIndex: number, year: number): number => {
 };
 
 export default function DobScreen() {
-  const [selectedMonth, setSelectedMonth] = useState<number>(6);
-  const [selectedDay, setSelectedDay] = useState<number | null>(15);
-  const [year, setYear] = useState('1985');
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
-  const yearNum = parseInt(year, 10) || new Date().getFullYear();
-  const daysInMonth = useMemo(() => getDaysInMonth(selectedMonth, yearNum), [selectedMonth, yearNum]);
+  // Usa el año actual solo para calcular los días de febrero correctamente.
+  const currentYear = new Date().getFullYear();
+  const daysInMonth = useMemo(
+    () => selectedMonth !== null ? getDaysInMonth(selectedMonth, currentYear) : 31,
+    [selectedMonth, currentYear]
+  );
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  useEffect(() => {
-    if (selectedDay && selectedDay > daysInMonth) setSelectedDay(null);
-  }, [daysInMonth, selectedDay]);
-
-  const isFormValid = selectedMonth !== null && selectedDay !== null && year.length === 4;
+  const isFormValid = selectedMonth !== null && selectedDay !== null;
 
   return (
     <SafeAreaView style={globalStyles.darkScreenContainer}>
-      {/* --- CAMBIO CLAVE: Se ajusta KeyboardAvoidingView para que envuelva toda la pantalla --- */}
-      {/* Esto asegura que el layout se adapte a la aparición del teclado. */}
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        // El offset compensa la altura del header en iOS.
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-      >
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <View style={styles.container}>
+        {/* El contenido principal ya no tiene scroll */}
+        <View>
           <View style={styles.progressContainer}>
             <Text style={styles.progressText}>2/3</Text>
             <View style={styles.progressBarBackground}>
@@ -97,44 +80,29 @@ export default function DobScreen() {
               </TouchableOpacity>
             ))}
           </View>
+        </View>
 
-          <ThemedText style={styles.sectionTitle}>Year</ThemedText>
-          <TextInput
-            style={globalStyles.textInput}
-            keyboardType="number-pad"
-            maxLength={4}
-            value={year}
-            onChangeText={(text) => setYear(text.replace(/[^0-9]/g, ''))}
-            placeholder="YYYY"
-            placeholderTextColor={Colors.brand.gray}
-          />
-        </ScrollView>
-
-        {/* --- CAMBIO CLAVE: El footer ahora está fuera del ScrollView pero dentro del KeyboardAvoidingView --- */}
-        {/* Esto permite que se mantenga fijo en la parte inferior y sea empujado por el teclado. */}
+        {/* El footer ahora sigue directamente al contenido anterior */}
         <View style={styles.footer}>
           <TouchableOpacity
             style={[globalStyles.primaryButton, !isFormValid && globalStyles.disabledButton]}
             disabled={!isFormValid}
-            onPress={() => alert(`Date selected: ${MONTHS[selectedMonth]} ${selectedDay}, ${year}`)}
+            onPress={() => router.push('/year')}
           >
-            <ThemedText style={globalStyles.primaryButtonText}>Confirm</ThemedText>
+            <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  // --- CAMBIO CLAVE: El contenedor principal ahora tiene flex:1 para que KAV funcione ---
   container: {
-    flex: 1,
+    // --- CAMBIO CLAVE: Se eliminan flex y justifyContent ---
+    // El contenedor ahora simplemente envuelve su contenido.
     paddingHorizontal: 20,
     paddingTop: 10,
-  },
-  scrollContent: {
-    paddingBottom: 20,
   },
   progressContainer: {
     marginBottom: 24,
@@ -191,7 +159,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   footer: {
-    paddingTop: 10,
+    // --- CAMBIO CLAVE: Se añade un margen superior ---
+    // Esto crea el espacio deseado después de la cuadrícula de días.
+    marginTop: 40,
     paddingBottom: 20,
     width: '100%',
   },
