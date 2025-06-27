@@ -35,12 +35,19 @@ export default function RootLayout() {
             },
             headerTitleAlign: 'center',
             headerShadowVisible: false,
-            headerBackTitle: ' ', 
+            headerBackTitle: ' ',
           }}>
           <Stack.Screen
             name="index"
             options={{
               title: 'Guardian Gate',
+            }}
+          />
+          {/* --- NUEVA PANTALLA --- */}
+          <Stack.Screen
+            name="otc"
+            options={{
+              title: 'Enter Code',
             }}
           />
           <Stack.Screen
@@ -49,13 +56,24 @@ export default function RootLayout() {
               title: 'Enter your SSN',
             }}
           />
-          {/* --- CAMBIO CLAVE --- */}
-          {/* Se eliminan los estilos de header específicos para 'dob' */}
-          {/* para que herede los estilos por defecto del Stack, igual que 'ssn'. */}
           <Stack.Screen
             name="dob"
             options={{
               title: 'Date of Birth',
+            }}
+          />
+           {/* --- PANTALLA AÑADIDA --- */}
+           <Stack.Screen
+            name="year"
+            options={{
+                title: 'Year of Birth',
+            }}
+          />
+          {/* --- NUEVA PANTALLA --- */}
+          <Stack.Screen
+            name="biometric"
+            options={{
+              title: 'Biometric Verification',
             }}
           />
         </Stack>

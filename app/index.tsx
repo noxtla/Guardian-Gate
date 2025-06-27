@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
-  // --- CAMBIO CLAVE: Importar componentes para manejar el teclado ---
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
@@ -34,7 +33,6 @@ export default function GuardianGateScreen() {
 
   return (
     <SafeAreaView style={globalStyles.darkScreenContainer} edges={['bottom']}>
-      {/* --- CAMBIO CLAVE: Envolver todo en KeyboardAvoidingView --- */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flexContainer}>
@@ -55,7 +53,7 @@ export default function GuardianGateScreen() {
                       !isPhoneValid && globalStyles.disabledButton,
                     ]}
                     disabled={!isPhoneValid}
-                    onPress={() => router.push('/ssn')}>
+                    onPress={() => router.push('/otc')}>
                     <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>
                   </TouchableOpacity>
                 </>
@@ -86,9 +84,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   containerPadding: {
-    // Usar 'space-between' para empujar el footer hacia abajo.
     justifyContent: 'space-between',
-    paddingBottom: 20, // Un poco de espacio extra en la parte inferior.
+    paddingBottom: 20,
   },
   inputContainer: {
     width: '100%',
