@@ -1,11 +1,13 @@
 // components/profile/ProfileHeader.tsx
 import React from 'react';
-import { View, Image, StyleSheet } from 'react-native';
+import { View, Image, StyleSheet, ImageSourcePropType } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { Colors } from '@/constants/Colors';
+import { globalStyles } from '@/constants/AppStyles'; // Import globalStyles
 
 interface ProfileHeaderProps {
   name: string;
+  username?: string; // Add optional username
   position: string;
   avatarSource?: ImageSourcePropType; // Optional: provide a real image source
 }
@@ -13,7 +15,7 @@ interface ProfileHeaderProps {
 // Placeholder para el avatar, usando el adaptive-icon.png como genérico
 const DEFAULT_AVATAR_PLACEHOLDER: ImageSourcePropType = require('@/assets/images/adaptive-icon.png');
 
-const ProfileHeader: React.FC<ProfileHeaderProps> = ({ name, position, avatarSource }) => {
+const ProfileHeader: React.FC<ProfileHeaderProps> = ({ name, username, position, avatarSource }) => {
   return (
     <View style={styles.container}>
       <Image
@@ -21,6 +23,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ name, position, avatarSou
         style={styles.avatar}
       />
       <ThemedText style={styles.name}>{name}</ThemedText>
+      {username && <ThemedText style={globalStyles.usernameText}>@{username}</ThemedText>}
       <ThemedText style={styles.position}>{position}</ThemedText>
     </View>
   );
@@ -46,7 +49,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.brand.darkBlue,
     fontFamily: 'OpenSans-SemiBold',
-    marginBottom: 5,
+    // marginBottom removed, now handled by usernameText margin
   },
   position: {
     fontSize: 16,

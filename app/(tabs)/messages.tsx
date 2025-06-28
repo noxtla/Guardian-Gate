@@ -4,7 +4,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { globalStyles } from '@/constants/AppStyles';
 import { Colors } from '@/constants/Colors';
 import { IconSymbol, IconSymbolName } from '@/components/ui/IconSymbol';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -16,7 +16,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Image,
-  ImageSourcePropType, // Import this type for image sources
+  ImageSourcePropType,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -35,13 +35,12 @@ interface Message {
   avatar: 'carlos' | 'default'; // Type for avatar source identifier
 }
 
-// --- CAMBIO CLAVE: Mapeo genérico de avatares ---
+// Mapeo genérico de avatares
 type AvatarName = 'carlos' | 'default'; // Define los nombres de los avatares permitidos
 const AVATAR_SOURCES: Record<AvatarName, ImageSourcePropType> = {
-  carlos: require('@/assets/images/adaptive-icon.png'),
-  default: require('@/assets/images/adaptive-icon.png'),
+  carlos: require('@/assets/images/adaptive-icon.png'), // Using adaptive-icon as placeholder
+  default: require('@/assets/images/adaptive-icon.png'), // Using adaptive-icon as placeholder
 };
-// --- FIN CAMBIO CLAVE ---
 
 // Component for a single chat message bubble
 const MessageBubble = ({ message }: { message: Message }) => {
@@ -49,9 +48,7 @@ const MessageBubble = ({ message }: { message: Message }) => {
   const textStyles = message.isSender ? styles.senderText : styles.receiverText;
   const timeStyles = message.isSender ? styles.senderTime : styles.receiverTime;
   
-  // --- CAMBIO CLAVE: Obtener el source del mapeo ---
   const avatarSource = AVATAR_SOURCES[message.avatar];
-  // --- FIN CAMBIO CLAVE ---
 
   return (
     <View style={[styles.messageRow, message.isSender ? styles.messageRowSender : styles.messageRowReceiver]}>
@@ -87,14 +84,20 @@ export default function MessagesScreen() {
   ]);
   const flatListRef = useRef<FlatList>(null);
 
+  // Determine if the send button should be active
+  const isSendButtonActive = useMemo(() => inputText.trim().length > 0, [inputText]);
+
   useEffect(() => {
-    if (messages.length > 0) {
+    // Scroll to end when messages change or component mounts
+    // Using a timeout to ensure layout is updated before scrolling
+    const timer = setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: true });
-    }
+    }, 100); // Small delay
+    return () => clearTimeout(timer);
   }, [messages]);
 
   const handleSend = () => {
-    if (inputText.trim()) {
+    if (isSendButtonActive) {
       const newMessage: Message = {
         id: String(messages.length + 1),
         text: inputText.trim(),
@@ -124,15 +127,14 @@ export default function MessagesScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 50 : 0} 
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} style={styles.messageListWrapper}>
           <FlatList
             ref={flatListRef}
             data={messages}
             renderItem={({ item }) => <MessageBubble message={item} />}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.messageListContent}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-            onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+            style={styles.messageListContainer} // Make FlatList component flex: 1
           />
         </TouchableWithoutFeedback>
 
@@ -147,8 +149,17 @@ export default function MessagesScreen() {
             value={inputText}
             onChangeText={setInputText}
             multiline
+            blurOnSubmit={false} // Prevents keyboard dismissal on "submit" (Enter)
+            onSubmitEditing={handleSend} // Allows sending on Enter key press
           />
-          <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              isSendButtonActive ? styles.sendButtonActive : styles.sendButtonInactive,
+            ]}
+            onPress={handleSend}
+            disabled={!isSendButtonActive} // Disable when input is empty
+          >
             <IconSymbol name="paperplane.fill" size={24} color={Colors.brand.white} />
           </TouchableOpacity>
         </View>
@@ -159,7 +170,8 @@ export default function MessagesScreen() {
 
 const styles = StyleSheet.create({
   keyboardAvoidingView: {
-    flex: 1,
+    flex: 1, // Ensures KAV takes full height
+    justifyContent: 'flex-end', // Pushes content to the bottom
   },
   headerContainer: {
     flexDirection: 'row',
@@ -179,11 +191,18 @@ const styles = StyleSheet.create({
     color: Colors.brand.darkBlue,
     fontFamily: 'OpenSans-SemiBold',
   },
+  // New styles for FlatList and its wrapper
+  messageListWrapper: {
+    flex: 1, // Make TouchableWithoutFeedback fill available space
+  },
+  messageListContainer: { // Style for the FlatList component itself
+    flex: 1, // Crucial: make FlatList fill available space
+  },
   messageListContent: {
     paddingHorizontal: 15,
     paddingVertical: 10,
-    flexGrow: 1,
-    justifyContent: 'flex-end',
+    flexGrow: 1, // Allows content to grow within the scroll view
+    justifyContent: 'flex-end', // Aligns messages to the bottom of the visible area
   },
   messageRow: {
     flexDirection: 'row',
@@ -278,16 +297,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginHorizontal: 10,
     color: Colors.brand.darkBlue,
-    maxHeight: 100,
+    maxHeight: 100, // Limits height of multiline input
     fontFamily: 'OpenSans-Regular',
   },
   sendButton: {
-    backgroundColor: Colors.brand.darkBlue,
     borderRadius: 25,
     width: 48,
     height: 48,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 5,
+  },
+  sendButtonActive: {
+    backgroundColor: Colors.brand.lightBlue, // Active state color
+  },
+  sendButtonInactive: {
+    backgroundColor: Colors.brand.darkGray, // Inactive/disabled state color
+    opacity: 0.6, // Visual feedback for disabled
   },
 });

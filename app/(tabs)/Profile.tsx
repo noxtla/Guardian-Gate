@@ -12,6 +12,7 @@ import {
   View,
   Platform,
   Alert, // For sign-out confirmation
+  ImageSourcePropType, // Import ImageSourcePropType
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -23,13 +24,15 @@ import ProfileStats from '@/components/profile/ProfileStats';
 // Mock data to simulate richer user data beyond AuthContext's basic user
 interface UserData {
   Name: string;
+  username: string; // Added username field
   Position: string;
   avatarSource?: ImageSourcePropType;
 }
 
 const mockUserData: UserData = {
-  Name: "John Doe",
-  Position: "Field Worker",
+  Name: "Jesus Salvador Cortes Gutierrez",
+  username: "jesus-salvador-cortes-gutierrez-6489", // Mock username
+  Position: "Computer Engineer",
   // avatarSource: require('@/assets/images/john-doe-avatar.png'), // Uncomment and add a real image if available
 };
 
@@ -37,8 +40,8 @@ const mockProfileData = {
   contributions: 10,
   followers: 0,
   following: 11,
-  joinedDate: "2023-05-08", // Updated to a more realistic past date
-  lastActive: "3 days ago", // Changed to more descriptive text
+  joinedDate: "May 8, 2025", // Updated to match image format
+  lastActive: "Active 3d ago", // Updated to match image format
   activityData: Array.from({ length: 182 }, () => Math.floor(Math.random() * 5)), // Placeholder
 };
 
@@ -82,12 +85,15 @@ export default function ProfileScreen() {
   // Custom header renderer for this screen
   const renderHeader = () => (
     <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <IconSymbol name="arrow.backward" size={24} color={Colors.brand.darkBlue} />
+      {/* Menu icon placeholder from original image */}
+      <TouchableOpacity style={styles.menuIconPlaceholder}>
+        <IconSymbol name="list.bullet" size={24} color={Colors.brand.darkBlue} /> {/* Assuming 'list.bullet' for menu */}
       </TouchableOpacity>
-      <ThemedText style={styles.headerTitle}>Profile</ThemedText>
-      <TouchableOpacity onPress={handleEditProfile} style={styles.settingsButton}>
-        <IconSymbol name="gearshape.fill" size={24} color={Colors.brand.darkBlue} />
+      {/* Skool logo placeholder */}
+      <ThemedText style={styles.skoolLogo}>skool</ThemedText>
+      {/* Three dots icon placeholder from original image */}
+      <TouchableOpacity style={styles.threeDotsIconPlaceholder}>
+        <IconSymbol name="ellipsis" size={24} color={Colors.brand.darkBlue} /> {/* Assuming 'ellipsis' for three dots */}
       </TouchableOpacity>
     </View>
   );
@@ -107,10 +113,26 @@ export default function ProfileScreen() {
       <FlatList
         data={[]} // Using an empty array because components are rendered in ListHeaderComponent
         renderItem={() => null} // No individual items to render
-        keyExtractor={(item, index) => index.toString()}
+        keyExtractor={(item, index) => index.toString()} // Fallback keyExtractor, though not strictly needed here
         ListHeaderComponent={
           <View style={styles.contentPadding}>
-            <ProfileHeader name={userData.Name} position={userData.Position} avatarSource={userData.avatarSource} />
+            <ProfileHeader
+              name={userData.Name}
+              username={userData.username} // Pass the username
+              position={userData.Position}
+              avatarSource={userData.avatarSource}
+            />
+
+            {/* NEW: Edit Profile Button */}
+            <TouchableOpacity
+              style={globalStyles.editProfileButton}
+              onPress={handleEditProfile}
+            >
+              <ThemedText style={globalStyles.editProfileButtonText}>
+                EDIT PROFILE
+              </ThemedText>
+            </TouchableOpacity>
+
             <ProfileInfo
               lastActive={mockProfileData.lastActive}
               joinedDate={mockProfileData.joinedDate}
@@ -160,24 +182,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 15,
     paddingBottom: 15,
-    backgroundColor: Colors.brand.lightGray,
+    backgroundColor: Colors.brand.white, // Changed to white as per new image
     height: Platform.OS === 'ios' ? 100 : 80, // Adjust height for safe area on iOS
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.brand.lightGray,
   },
-  backButton: {
+  menuIconPlaceholder: {
     padding: 5,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: Colors.brand.darkBlue,
-    fontFamily: 'OpenSans-SemiBold',
-    flex: 1, // Allows title to take available space and center
-    textAlign: 'center',
-    marginRight: -34, // Compensate for settingsButton padding to truly center (24 icon + 5 padding)
+  skoolLogo: {
+    fontSize: 28, // Larger font size for logo
+    fontWeight: 'bold',
+    color: '#E86F28', // Specific orange color for "skool" logo
+    fontFamily: 'SpaceMono', // Example font, match if different
   },
-  settingsButton: {
+  threeDotsIconPlaceholder: {
     padding: 5,
   },
   listContentContainer: {

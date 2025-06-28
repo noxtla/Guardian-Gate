@@ -185,7 +185,7 @@ export const globalStyles = StyleSheet.create({
     marginLeft: 'auto',
   },
 
-  // --- NUEVOS ESTILOS PARA LA PANTALLA DE PERFIL ---
+  // --- ESTILOS PARA LA PANTALLA DE PERFIL ---
   profileSectionHeader: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -240,8 +240,38 @@ export const globalStyles = StyleSheet.create({
     color: Colors.brand.gray,
     marginTop: 5,
   },
+  // NUEVOS ESTILOS
+  editProfileButton: {
+    backgroundColor: Colors.brand.lightGray, // Fondo gris claro
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 25, // Bordes más redondeados
+    width: '80%', // Ocupa un buen ancho
+    alignSelf: 'center', // Centra el botón
+    marginTop: 15, // Espacio superior
+    marginBottom: 20, // Espacio inferior
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  editProfileButtonText: {
+    color: Colors.brand.darkBlue,
+    fontSize: 16,
+    fontWeight: 'bold',
+    textTransform: 'uppercase', // "EDIT PROFILE" en mayúsculas
+    fontFamily: 'OpenSans-SemiBold', // Utiliza una fuente semibold si es posible
+  },
+  usernameText: {
+    fontSize: 14,
+    color: Colors.brand.gray, // Color más claro para el username
+    marginTop: 5, // Espacio debajo del nombre
+    marginBottom: 5, // Espacio encima de la posición/botón
+    fontFamily: 'OpenSans-Regular',
+  },
 
-  // --- NUEVOS ESTILOS PARA HORIZONTAL TAB BAR ---
+  // --- ESTILOS PARA HORIZONTAL TAB BAR ---
   horizontalTabBarContainer: {
     flexDirection: 'row',
     backgroundColor: Colors.brand.white,
@@ -272,7 +302,7 @@ export const globalStyles = StyleSheet.create({
     color: Colors.brand.white,
   },
 
-  // --- NUEVOS ESTILOS PARA FORMULARIO DE EDICIÓN DE PERFIL ---
+  // --- ESTILOS PARA FORMULARIO DE EDICIÓN DE PERFIL ---
   editProfileFormContainer: {
     padding: 15,
     backgroundColor: Colors.brand.white,

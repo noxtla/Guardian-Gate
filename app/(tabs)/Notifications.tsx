@@ -9,7 +9,8 @@ import {
   StyleSheet,
   View,
   TouchableOpacity,
-  FlatList,
+  // FlatList, // Eliminamos FlatList
+  ScrollView, // Usamos ScrollView en su lugar
   Platform,
   Image,
   ImageSourcePropType,
@@ -165,34 +166,28 @@ export default function NotificationsScreen() {
           <ThemedText style={globalStyles.infoText}>You have no notifications.</ThemedText>
         </View>
       ) : (
-        <FlatList
-          data={[]} // Use empty data as we're rendering sections manually below
-          ListHeaderComponent={
-            <>
-              {newNotifications.length > 0 && (
-                <View>
-                  <ThemedText style={globalStyles.notificationSectionHeader}>New</ThemedText>
-                  {newNotifications.map((notification) => (
-                    <NotificationItem key={notification.id} notification={notification} />
-                  ))}
-                </View>
-              )}
-
-              {readNotifications.length > 0 && (
-                <View>
-                  <ThemedText style={globalStyles.notificationSectionHeader}>Read</ThemedText>
-                  {readNotifications.map((notification) => (
-                    <NotificationItem key={notification.id} notification={notification} />
-                  ))}
-                </View>
-              )}
-            </>
-          }
-          renderItem={() => null} // No items to render directly from data
-          keyExtractor={(item) => item.id}
+        <ScrollView // Usamos ScrollView en lugar de FlatList
           contentContainerStyle={styles.listContentContainer}
           showsVerticalScrollIndicator={false}
-        />
+        >
+          {newNotifications.length > 0 && (
+            <View>
+              <ThemedText style={globalStyles.notificationSectionHeader}>New</ThemedText>
+              {newNotifications.map((notification) => (
+                <NotificationItem key={notification.id} notification={notification} />
+              ))}
+            </View>
+          )}
+
+          {readNotifications.length > 0 && (
+            <View>
+              <ThemedText style={globalStyles.notificationSectionHeader}>Read</ThemedText>
+              {readNotifications.map((notification) => (
+                <NotificationItem key={notification.id} notification={notification} />
+              ))}
+            </View>
+          )}
+        </ScrollView>
       )}
     </ThemedView>
   );

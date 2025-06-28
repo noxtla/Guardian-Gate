@@ -5,7 +5,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
 import { ComponentProps } from 'react';
-import { OpaqueColorValue, type StyleProp, type TextStyle } = 'react-native';
+import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native'; // <-- CORREGIDO AQUÍ
 
 type IconMapping = Record<string, ComponentProps<typeof MaterialIcons>['name']>;
 
@@ -43,7 +43,7 @@ const MAPPING: IconMapping = {
   // Notification Screen Icons
   'rectangle.fill.on.rectangle.fill': 'data-usage', // Generic system/server icon for SystemTreeService
 
-  // Profile Screen Icons <-- NEW ICONS ADDED HERE
+  // Profile Screen Icons
   'gearshape.fill': 'settings', // Settings icon for profile
   'arrow.left': 'arrow-back', // Back arrow for Edit Profile page
   'arrow.right': 'arrow-forward', // Forward arrow for list items
@@ -67,13 +67,13 @@ export function IconSymbol({
   size = 24,
   color,
   style,
-  weight = 'regular', // Added weight prop
+  weight = 'regular',
 }: {
   name: IconSymbolName;
   size?: number;
   color: string | OpaqueColorValue;
   style?: StyleProp<TextStyle>;
-  weight?: SymbolWeight; // Added weight to type
+  weight?: SymbolWeight;
 }) {
   if (!MAPPING[name]) {
     // Optionally log a warning for unmapped icons in development
