@@ -11,17 +11,23 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
-  Alert,
+  // Alert, // Eliminado para simplificar
+  // ActivityIndicator, // Eliminado para simplificar
 } from 'react-native';
 import { globalStyles } from '@/constants/AppStyles';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+// import * as LocalAuthentication from 'expo-local-authentication'; // Eliminado para simplificar
+// import { AuthService } from '@/services/authService'; // Eliminado para simplificar
+// import { useAuth } from '@/context/AuthContext'; // Eliminado para simplificar
+// import { useState } from 'react'; // Eliminado para simplificar
 
 export default function BiometricScreen() {
+  // const { user, updateBiometricsStatus } = useAuth(); // Eliminado para simplificar
+  // const [isLoading, setIsLoading] = useState(false); // Eliminado para simplificar
 
+  // --- CAMBIO CLAVE ---: Función simplificada para navegación directa a tabs
   const handleConfirm = () => {
-    // Usamos 'replace' para navegar a la nueva sección y limpiar el historial de login.
-    // Esto evita que el usuario pueda presionar "atrás" y volver a las pantallas de autenticación.
-    router.replace('/(tabs)');
+    router.replace('/(tabs)'); // Directamente a las tabs
   };
 
   return (
@@ -40,9 +46,14 @@ export default function BiometricScreen() {
 
             <TouchableOpacity
               style={globalStyles.primaryButton}
-              onPress={handleConfirm}
+              onPress={handleConfirm} // Llama a la función simplificada
+              // disabled={isLoading} // Eliminado para simplificar
             >
-              <ThemedText style={globalStyles.primaryButtonText}>Verify Identity</ThemedText>
+              {/* {isLoading ? ( // Eliminado para simplificar
+                <ActivityIndicator color={Colors.brand.white} />
+              ) : ( */}
+                <ThemedText style={globalStyles.primaryButtonText}>Verify Identity</ThemedText>
+              {/* )} */}
             </TouchableOpacity>
 
             <ThemedText style={globalStyles.infoText}>

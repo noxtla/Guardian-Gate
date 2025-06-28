@@ -1,6 +1,6 @@
 // services/authService.ts
-import * as Keychain from 'react-native-keychain'; // Para guardar y recuperar el JWT
-import { apiClient } from './apiClient'; // Importa nuestra función apiClient centralizada
+import * as Keychain from 'react-native-keychain';
+import { apiClient } from './apiClient';
 
 /**
  * Servicio encargado de todas las operaciones relacionadas con la autenticación
@@ -14,11 +14,10 @@ export const AuthService = {
    * @throws Error si la petición falla.
    */
   sendOtp: async (phoneNumber: string): Promise<void> => {
-    // El endpoint es solo la parte final del path, ya que API_BASE_URL incluye
-    // '/webhook-test/guardianGate' (o el de producción).
-    await apiClient('/send-otp', {
-      method: 'POST', // Aseguramos que es un POST
-      body: { phoneNumber }, // El cuerpo de la petición.
+    // El endpoint es ahora '', y 'action' va en el cuerpo
+    await apiClient('', {
+      method: 'POST',
+      body: { action: "send-otp", phoneNumber },
       authenticated: false, // Esta petición no requiere un JWT (es el inicio del flujo de login)
     });
   },
@@ -33,20 +32,19 @@ export const AuthService = {
    */
   verifyOtp: async (phoneNumber: string, otpCode: string): Promise<{ token: string; userId: string; hasBiometricsEnabled: boolean }> => {
     // Esperamos que el webhook de n8n devuelva un objeto con 'token', 'userId' y 'hasBiometricsEnabled'.
-    const response = await apiClient<{ token: string; userId: string; hasBiometricsEnabled: boolean }>('/verify-otp', {
+    const response = await apiClient<{ token: string; userId: string; hasBiometricsEnabled: boolean }>('', {
       method: 'POST',
-      body: { phoneNumber, otpCode },
+      body: { action: "verify-otp", phoneNumber, otpCode },
       authenticated: false, // Esta petición tampoco requiere JWT (aún estamos en el flujo de login inicial)
     });
 
     const { token, userId, hasBiometricsEnabled } = response;
-    if (token) {
-      // Guardar el token JWT de forma segura usando Keychain.
-      await Keychain.setGenericPassword('auth_token', token);
-    } else {
-      // Si el backend no devuelve un token, indica un problema.
-      throw new Error('Token de autenticación no recibido.');
-    }
+    // --- CAMBIO CLAVE: Temporarily disabling JWT storage ---
+    // if (token) {
+    //   await Keychain.setGenericPassword('auth_token', token);
+    // } else {
+    //   throw new Error('Token de autenticación no recibido.');
+    // }
     return { token, userId, hasBiometricsEnabled };
   },
 
@@ -62,17 +60,17 @@ export const AuthService = {
    * @throws Error si los detalles no coinciden o si la verificación falla.
    */
   verifyUserDetails: async (phoneNumber: string, ssnLast4: string, dobMonth: number, dobDay: number, dobYear: number): Promise<{ token: string; userId: string; hasBiometricsEnabled: boolean }> => {
-    const response = await apiClient<{ token: string; userId: string; hasBiometricsEnabled: boolean }>('/verify-user-details', {
+    const response = await apiClient<{ token: string; userId: string; hasBiometricsEnabled: boolean }>('', {
       method: 'POST',
-      body: { phoneNumber, ssnLast4, dobMonth, dobDay, dobYear },
+      body: { action: "verify-user-details", phoneNumber, ssnLast4, dobMonth, dobDay, dobYear },
       authenticated: false, // Todavía no estamos usando el token recién adquirido para autenticar esta llamada
     });
 
     const { token, userId, hasBiometricsEnabled } = response;
-    if (token) {
-        // Actualiza el token JWT de forma segura si el backend devuelve uno nuevo.
-        await Keychain.setGenericPassword('auth_token', token);
-    }
+    // --- CAMBIO CLAVE: Temporarily disabling JWT storage ---
+    // if (token) {
+    //     await Keychain.setGenericPassword('auth_token', token);
+    // }
     return { token, userId, hasBiometricsEnabled };
   },
 
@@ -84,10 +82,10 @@ export const AuthService = {
    * @throws Error si el registro falla.
    */
   registerBiometric: async (userId: string): Promise<void> => {
-    await apiClient('/register-biometric', {
+    await apiClient('', {
         method: 'POST',
-        body: { userId, biometricType: "faceid", status: "enabled" },
-        authenticated: true, // ¡IMPORTANTE! Esta petición necesita el JWT para identificar al usuario.
+        body: { action: "register-biometric", userId, biometricType: "faceid", status: "enabled" },
+        authenticated: false, // <-- CAMBIO CLAVE: Desactivamos la autenticación por JWT por ahora.
     });
   },
 
@@ -96,13 +94,15 @@ export const AuthService = {
    * @returns El token JWT como string o null si no se encuentra.
    */
   getToken: async (): Promise<string | null> => {
-    try {
-        const credentials = await Keychain.getGenericPassword();
-        return credentials ? credentials.password : null;
-    } catch (error) {
-        console.error('Error al obtener el token de Keychain:', error);
-        return null;
-    }
+    // --- CAMBIO CLAVE: Siempre devolverá null si no guardamos tokens ---
+    return null; // Temporalmente deshabilitado
+    // try {
+    //     const credentials = await Keychain.getGenericPassword();
+    //     return credentials ? credentials.password : null;
+    // } catch (error) {
+    //     console.error('Error al obtener el token de Keychain:', error);
+    //     return null;
+    // }
   },
 
   /**
@@ -110,21 +110,11 @@ export const AuthService = {
    * @returns Una promesa que se resuelve cuando la operación es exitosa.
    */
   logout: async (): Promise<void> => {
-    try {
-        await Keychain.resetGenericPassword();
-    } catch (error) {
-        console.error('Error al restablecer el token en Keychain:', error);
-    }
-  },
-
-  /**
-   * NOTA IMPORTANTE:
-   * En un sistema real, una vez que se recibe el token del backend (en verifyOtp o verifyUserDetails),
-   * las subsiguientes llamadas API para el mismo usuario deberían usar ese token para autenticación.
-   * Aquí, las llamadas 'verifyOtp' y 'verifyUserDetails' se marcan como 'authenticated: false'
-   * bajo el supuesto de que son parte del proceso inicial de login antes de que el token sea plenamente
-   * efectivo para autorizar acciones. El 'registerBiometric' sí requiere 'authenticated: true'.
-   * Si tu backend requiere que el JWT esté presente desde 'verifyUserDetails', ajusta el 'authenticated'
-   * a 'true' para esa función también.
-   */
+    // --- CAMBIO CLAVE: No hará nada si no hay token guardado ---
+    // try {
+    //     await Keychain.resetGenericPassword();
+    // } catch (error) {
+    //     console.error('Error al restablecer el token en Keychain:', error);
+    // }
+  }
 };

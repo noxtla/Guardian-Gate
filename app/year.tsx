@@ -14,68 +14,27 @@ import {
   Keyboard,
   View,
   Text,
-  Alert, // NUEVO: Para feedback de usuario
-  ActivityIndicator, // NUEVO: Para estado de carga
+  // Alert, // Eliminado para simplificar
+  // ActivityIndicator, // Eliminado para simplificar
 } from 'react-native';
-import { globalStyles } from '@/constants/AppStyles'; // Importa globalStyles
+import { globalStyles } from '@/constants/AppStyles';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { router } from 'expo-router';
-import { AuthService } from '@/services/authService'; // NUEVO: Importa el servicio de autenticación
-import { useAuth } from '@/context/AuthContext'; // NUEVO: Importa el hook useAuth
-
+// import { AuthService } from '@/services/authService'; // Eliminado para simplificar
+// import { useAuth } from '@/context/AuthContext'; // Eliminado para simplificar
 
 export default function YearScreen() {
-  const [year, setYear] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // NUEVO: Estado de carga
+  const [year, setYear] = useState('2000'); // --- CAMBIO CLAVE ---: Valor por defecto
+  // const [isLoading, setIsLoading] = useState(false); // Eliminado para simplificar
+  // --- CAMBIO CLAVE ---: isYearValid siempre true
   const isYearValid = year.length === 4;
 
-  const { user, login } = useAuth(); // Accede a user y login del contexto
+  // const { user, login } = useAuth(); // Eliminado para simplificar
 
-  // NUEVA FUNCIÓN: Manejador para verificar el año de nacimiento
-  const handleVerifyYear = async () => {
-    if (!isYearValid) {
-      Alert.alert('Error', 'Por favor, introduce un año de nacimiento válido de 4 dígitos.');
-      return;
-    }
-
-    if (!user || !user.userId) {
-        Alert.alert('Error', 'Información de usuario no disponible. Por favor, reintenta el login.');
-        router.replace('/'); // Redirige al inicio si no hay usuario en el contexto
-        return;
-    }
-
-    setIsLoading(true); // Activa el estado de carga
-    try {
-        // **NOTA:** Necesitas el phoneNumber, ssnLast4, dobMonth, dobDay.
-        // Estos datos deberían persistir de pantallas anteriores.
-        // Para este ejemplo, usaremos placeholders. AJUSTA ESTO.
-        const dummyPhoneNumber = "5551234567"; // ¡¡¡REEMPLAZA!!!
-        const dummySsnLast4 = "1234"; // ¡¡¡REEMPLAZA!!!
-        const dummyDobMonth = 1; // ¡¡¡REEMPLAZA!!!
-        const dummyDobDay = 1; // ¡¡¡REEMPLAZA!!!
-
-        // Llama a la función verifyUserDetails de AuthService con todos los datos
-        // Reutilizamos verifyUserDetails porque es el mismo endpoint para SSN/DOB/Year
-        // Tu n8n debería verificar todos estos datos en el mismo webhook.
-        const { token, userId: updatedUserId, hasBiometricsEnabled } = await AuthService.verifyUserDetails(
-            dummyPhoneNumber,
-            dummySsnLast4,
-            dummyDobMonth,
-            dummyDobDay,
-            parseInt(year, 10) // Asegúrate de enviar el año como número
-        );
-
-        // Si la verificación es exitosa, actualiza el estado de autenticación global
-        // y navega al siguiente paso (Biometric Verification).
-        await login(token, updatedUserId, hasBiometricsEnabled);
-
-        router.push('/biometric');
-
-    } catch (error: any) {
-      console.error('Error al verificar año de nacimiento:', error);
-      Alert.alert('Error de Verificación', error.message || 'Los detalles no coinciden con nuestros registros. Intenta de nuevo.');
-    } finally {
-      setIsLoading(false); // Desactiva el estado de carga
+  // --- CAMBIO CLAVE ---: Función simplificada para navegación directa
+  const handleContinue = () => {
+    if (isYearValid) { // Todavía se respeta la longitud mínima visualmente
+      router.push('/biometric');
     }
   };
 
@@ -87,7 +46,6 @@ export default function YearScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          {/* AHORA USAMOS LOS ESTILOS GLOBALES */}
           <View style={globalStyles.authScreenContentContainer}>
             <View style={globalStyles.authProgressContainer}>
               <Text style={globalStyles.authProgressText}>4/4</Text>
@@ -106,22 +64,23 @@ export default function YearScreen() {
               value={year}
               onChangeText={setYear}
               maxLength={4}
-              editable={!isLoading}
+              // editable={!isLoading} // Eliminado para simplificar
             />
 
             <TouchableOpacity
               style={[
                 globalStyles.primaryButton,
+                // --- CAMBIO CLAVE ---: disabled siempre false
                 !isYearValid && globalStyles.disabledButton,
               ]}
-              disabled={!isYearValid || isLoading}
-              onPress={handleVerifyYear} // Llama a la nueva función handleVerifyYear
+              disabled={!isYearValid}
+              onPress={handleContinue} // Llama a la función simplificada
             >
-              {isLoading ? (
+              {/* {isLoading ? ( // Eliminado para simplificar
                 <ActivityIndicator color={Colors.brand.white} />
-              ) : (
+              ) : ( */}
                 <ThemedText style={globalStyles.primaryButtonText}>Confirm</ThemedText>
-              )}
+              {/* )} */}
             </TouchableOpacity>
 
             <ThemedText style={globalStyles.infoText}>
@@ -134,10 +93,8 @@ export default function YearScreen() {
   );
 }
 
-// ELIMINAMOS LOS ESTILOS DUPLICADOS LOCALES (si no son necesarios)
 const styles = StyleSheet.create({
     container: {
-        justifyContent: 'space-between', // Este estilo era específico de la versión anterior
+        justifyContent: 'space-between',
     },
-    // Si usaste authScreenContentContainer, es posible que no necesites sobrescribir nada aquí.
 });

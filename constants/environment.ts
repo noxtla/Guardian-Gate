@@ -1,37 +1,44 @@
 // constants/environment.ts
 import Constants from 'expo-constants';
 
-// Define una interfaz para nuestras configuraciones extra.
-// '?' indica que la propiedad puede ser opcional.
-interface ExtraConfig {
-  N8N_WEBHOOK_BASE_URL?: string;
-}
+// --- INICIO: SOLUCIÓN TEMPORAL DE HARDCODEO PARA DESARROLLO ---
+// ESTO DEBE SER ELIMINADO Y REEMPLAZADO POR LA LÓGICA DE .ENV/EAS ANTES DE PRODUCCIÓN.
+export const API_BASE_URL = 'https://noxtla.app.n8n.cloud/webhook-test/guardianGate';
+// --- FIN: SOLUCIÓN TEMPORAL DE HARDCODEO PARA DESARROLLO ---
 
-// Accede a las configuraciones 'extra' de Constants.expoConfig.
-// Esto es donde las variables de entorno pueden ser inyectadas para builds de producción
-// a través de app.json o app.config.ts (usando Expo Application Services - EAS).
-// El '|| {}' asegura que `extraConfig` siempre sea un objeto válido,
-// previniendo errores si 'extra' es undefined en alguna circunstancia.
-const extraConfig: ExtraConfig = (Constants.expoConfig?.extra as ExtraConfig) || {};
 
-// Determina la API_BASE_URL siguiendo un orden de prioridad:
-// 1. process.env.N8N_WEBHOOK_BASE_URL: Para desarrollo local (leído del archivo .env por Metro bundler).
-// 2. extraConfig.N8N_WEBHOOK_BASE_URL: Para builds de producción (inyectado vía EAS).
-// 3. Fallback seguro: Una URL por defecto en caso de que ninguna de las anteriores esté definida.
-//    Es importante que esta URL sea funcional o que se genere una advertencia clara.
-export const API_BASE_URL =
-  process.env.N8N_WEBHOOK_BASE_URL ||
-  extraConfig.N8N_WEBHOOK_BASE_URL ||
-  'https://default.n8n.cloud/webhook-test/guardianGate'; // Fallback por seguridad
+// --- El resto del código ahora está inactivo para API_BASE_URL, pero lo mantendremos comentado ---
+// interface ExtraConfig {
+//   N8N_BASE_WEBHOOK_URL_TEST?: string;
+//   N8N_BASE_WEBHOOK_URL_PROD?: string;
+//   N8N_GUARDIAN_GATE_WEBHOOK_NAME?: string;
+// }
 
-// Mensaje de advertencia si la URL no está configurada explícitamente.
-// Esto es útil en desarrollo para asegurar que no se use un valor por defecto no deseado.
-if (!API_BASE_URL || API_BASE_URL === 'https://default.n8n.cloud/webhook-test/guardianGate') {
+// const extraConfig: ExtraConfig = (Constants.expoConfig?.extra as ExtraConfig) || {};
+
+// const n8nBaseUrl =
+//   process.env.N8N_BASE_WEBHOOK_URL_TEST ||
+//   extraConfig.N8N_BASE_WEBHOOK_URL_PROD ||
+//   'https://default.n8n.cloud/webhook-test/';
+
+// const n8nWebhookName =
+//   process.env.N8N_GUARDIAN_GATE_WEBHOOK_NAME ||
+//   extraConfig.N8N_GUARDIAN_GATE_WEBHOOK_NAME ||
+//   'defaultWebhookName';
+
+// Comenta o elimina la línea original de exportación de API_BASE_URL
+// export const API_BASE_URL = `${n8nBaseUrl.replace(/\/+$/, '')}/${n8nWebhookName}`;
+
+
+// Mantén este console.log para verificar que la URL hardcodeada está siendo utilizada.
+console.log(`Usando API Base URL: ${API_BASE_URL}`);
+
+// El warning también se puede comentar temporalmente, ya no es relevante con el hardcodeo.
+/*
+if (!API_BASE_URL || n8nBaseUrl === 'https://default.n8n.cloud/webhook-test/' || n8nWebhookName === 'defaultWebhookName') {
   console.warn(
     'API_BASE_URL no está configurada explícitamente. Se está utilizando una URL por defecto. ' +
-      'Asegúrate de que N8N_WEBHOOK_BASE_URL esté definida en tu archivo .env local o en app.json para builds de producción.'
+      'Asegúrate de que N8N_BASE_WEBHOOK_URL_TEST y N8N_GUARDIAN_GATE_WEBHOOK_NAME estén definidos en tu archivo .env local o en app.json para builds de producción.'
   );
 }
-
-// Imprime la URL que se está utilizando. Útil para depuración.
-console.log(`Usando API Base URL: ${API_BASE_URL}`);
+*/
