@@ -133,6 +133,7 @@ export default function TabLayout() {
         options={{
           title: 'Notifications',
           tabBarIcon: ({ color }) => <IconSymbol name="bell.fill" color={color} size={28} />,
+          headerShown: false, // <--- ADD THIS LINE to hide the default header for this screen
         }}
       />
       <Tabs.Screen

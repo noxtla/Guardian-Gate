@@ -5,7 +5,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
 import { ComponentProps } from 'react';
-import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
+import { OpaqueColorValue, type StyleProp, type TextStyle } = 'react-native';
 
 type IconMapping = Record<string, ComponentProps<typeof MaterialIcons>['name']>;
 
@@ -16,7 +16,6 @@ type IconMapping = Record<string, ComponentProps<typeof MaterialIcons>['name']>;
  * - All icons used in the app MUST be defined here.
  */
 const MAPPING: IconMapping = {
-  // --- LÍNEA AÑADIDA ---
   'shield.fill': 'security', // Icon for login/security screens
 
   // Tab Bar Icons
@@ -36,10 +35,24 @@ const MAPPING: IconMapping = {
   'wrench.and.screwdriver.fill': 'build', // Work
   'exclamationmark.bubble.fill': 'support-agent', // Ticket (Support)
 
-  // Chat Screen Icons <-- ADD THESE NEW ICONS
+  // Chat Screen Icons
   'arrow.backward': 'arrow-back', // For the back button in the chat header
   'paperclip.fill': 'attach-file', // For the attachment icon in the input bar
-  // 'paperplane.fill': 'send', // Already mapped from previous work, used for the send button
+  'paperplane.fill': 'send', // Already mapped from previous work, used for the send button
+
+  // Notification Screen Icons
+  'rectangle.fill.on.rectangle.fill': 'data-usage', // Generic system/server icon for SystemTreeService
+
+  // Profile Screen Icons <-- NEW ICONS ADDED HERE
+  'gearshape.fill': 'settings', // Settings icon for profile
+  'arrow.left': 'arrow-back', // Back arrow for Edit Profile page
+  'arrow.right': 'arrow-forward', // Forward arrow for list items
+  'door.right.hand.open.fill': 'logout', // Sign out icon
+  'bolt.fill': 'flash-on', // Placeholder for activity chart (or any dynamic data)
+  'calendar': 'calendar-today', // Joined date
+  'clock.fill': 'schedule', // Last active
+  'person.2.fill': 'people', // Followers/Following
+  'chart.bar.fill': 'bar-chart', // Contributions (or general stats)
 };
 
 export type IconSymbolName = keyof typeof MAPPING;
@@ -54,12 +67,13 @@ export function IconSymbol({
   size = 24,
   color,
   style,
+  weight = 'regular', // Added weight prop
 }: {
   name: IconSymbolName;
   size?: number;
   color: string | OpaqueColorValue;
   style?: StyleProp<TextStyle>;
-  weight?: SymbolWeight;
+  weight?: SymbolWeight; // Added weight to type
 }) {
   if (!MAPPING[name]) {
     // Optionally log a warning for unmapped icons in development
