@@ -70,4 +70,43 @@ export const globalStyles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
+
+  // --- NUEVOS ESTILOS COMUNES PARA EL FLUJO DE AUTENTICACIÓN ---
+  authProgressContainer: {
+    width: '100%',
+    marginBottom: 24,
+  },
+  authProgressText: {
+    alignSelf: 'flex-end',
+    color: Colors.brand.gray,
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  authProgressBarBackground: {
+    height: 8,
+    width: '100%',
+    backgroundColor: Colors.brand.darkGray,
+    borderRadius: 4,
+  },
+  authProgressBarFill: {
+    height: '100%',
+    backgroundColor: Colors.brand.lightBlue,
+    borderRadius: 4,
+  },
+  authTitle: {
+    fontSize: 22,
+    color: Colors.brand.white,
+    textAlign: 'center',
+    fontWeight: '600',
+    maxWidth: '90%',
+  },
+  // Añadimos un estilo general para el contenedor de pantallas de autenticación
+  // que tienen el mismo padding y alineación central.
+  authScreenContentContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    alignItems: 'center',
+    gap: 25, // Espacio entre elementos principales de la pantalla
+  },
 });
