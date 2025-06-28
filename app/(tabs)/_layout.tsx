@@ -4,8 +4,8 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Colors } from '@/constants/Colors';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { StyleSheet, useWindowDimensions, View, TouchableOpacity } from 'react-native'; // Añadir TouchableOpacity
-import { useEffect } from 'react'; // <-- Añadir useEffect
+import { StyleSheet, useWindowDimensions, View, TouchableOpacity } from 'react-native';
+import { useEffect } from 'react';
 
 // Importaciones de reanimated
 import Animated, {
@@ -15,45 +15,37 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 
-// --- NUEVO COMPONENTE: CustomTabBarContainer ---
+// CustomTabBar (no changes needed here for this step)
 function CustomTabBar({ state, descriptors, navigation }: any) {
   const { width } = useWindowDimensions();
-  const TAB_BAR_HEIGHT = 80; // Altura del tab bar
+  const TAB_BAR_HEIGHT = 80;
   const NUMBER_OF_TABS = state.routes.length;
-  const TAB_ITEM_WIDTH = width / NUMBER_OF_TABS; // Ancho igual para cada ítem de tab
+  const TAB_ITEM_WIDTH = width / NUMBER_OF_TABS;
 
-  // Valores compartidos para la posición y ancho de la píldora animada
   const translateX = useSharedValue(0);
   const pillWidth = useSharedValue(TAB_ITEM_WIDTH);
 
-  // Animación de la píldora al cambiar de pestaña
   useEffect(() => {
     const activeTab = state.routes[state.index];
-    const targetX = state.index * TAB_ITEM_WIDTH; // Calcular la posición X de la píldora
-    // Podemos ajustar el `pillWidth` si queremos que la píldora sea más estrecha que el ítem del tab.
-    // Por ahora, lo mantenemos igual que TAB_ITEM_WIDTH.
+    const targetX = state.index * TAB_ITEM_WIDTH;
     
     translateX.value = withTiming(targetX, { duration: 300, easing: Easing.out(Easing.quad) });
-    // pillWidth.value = withTiming(TAB_ITEM_WIDTH, { duration: 300, easing: Easing.out(Easing.quad) }); // Se puede animar el ancho si la píldora no es del mismo ancho que el ítem.
-  }, [state.index, width, TAB_ITEM_WIDTH]); // Dependencias para re-ejecutar el efecto
+  }, [state.index, width, TAB_ITEM_WIDTH]);
 
-  // Estilo animado para la píldora
   const pillAnimatedStyle = useAnimatedStyle(() => {
     return {
       transform: [{ translateX: translateX.value }],
-      width: pillWidth.value, // El ancho de la píldora se anima con el mismo valor
-      height: '100%', // Ocupa toda la altura disponible en el tab bar
-      position: 'absolute', // Es crucial para que se mueva independientemente
-      borderRadius: 25, // Bordes redondeados para la píldora
-      backgroundColor: Colors.brand.lightBlue, // Color de la píldora
-      // Ajuste de padding/margen si la píldora es más pequeña que el ítem del tab
+      width: pillWidth.value,
+      height: '100%',
+      position: 'absolute',
+      borderRadius: 25,
+      backgroundColor: Colors.brand.lightBlue,
       paddingHorizontal: 0,
     };
   });
 
   return (
     <View style={[styles.tabBarContainer, { width }]}>
-      {/* La píldora animada se renderiza primero para que quede detrás de los iconos y textos */}
       <Animated.View style={pillAnimatedStyle} />
 
       {state.routes.map((route: any, index: number) => {
@@ -95,12 +87,11 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
             testID={options.tabBarTestID}
             onPress={onPress}
             onLongPress={onLongPress}
-            style={[styles.tabItem, { width: TAB_ITEM_WIDTH }]} // Asegura que cada ítem tenga el mismo ancho
+            style={[styles.tabItem, { width: TAB_ITEM_WIDTH }]}
           >
-            {/* Contenido del ítem de la pestaña (ícono y texto) */}
             <IconSymbol
               name={options.tabBarIcon ? options.tabBarIcon({ color: Colors.brand.white }).props.name : 'questionmark.circle.fill'}
-              color={isFocused ? Colors.brand.white : Colors.brand.gray} // El ícono siempre será blanco si está dentro de la píldora
+              color={isFocused ? Colors.brand.white : Colors.brand.gray}
               size={28}
             />
             {isFocused && (
@@ -118,10 +109,9 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
 export default function TabLayout() {
   return (
     <Tabs
-      tabBar={(props) => <CustomTabBar {...props} />} // USAR NUESTRO CUSTOM TAB BAR
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
-        headerShown: false, // El layout padre ya proporciona un header
-        // ELIMINAR PROPIEDADES DE tabBarStyle AQUÍ, YA QUE SERÁN MANEJADAS POR CustomTabBar
+        headerShown: false, // The parent layout already provides a header
       }}>
       <Tabs.Screen
         name="index"
@@ -135,6 +125,7 @@ export default function TabLayout() {
         options={{
           title: 'Messages',
           tabBarIcon: ({ color }) => <IconSymbol name="message.fill" color={color} size={28} />,
+          headerShown: false, // <--- ADD THIS LINE to hide the default header for this screen
         }}
       />
       <Tabs.Screen
@@ -171,17 +162,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -5 },
     shadowOpacity: 0.1,
     shadowRadius: 5,
-    overflow: 'hidden', // Importante para que la píldora animada se "corte" en los bordes redondeados
+    overflow: 'hidden',
   },
   tabItem: {
-    flex: 1, // Cada ítem ocupa el mismo espacio
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row', // Para que el ícono y el texto estén en la misma línea
-    gap: 8, // Espacio entre ícono y texto
+    flexDirection: 'row',
+    gap: 8,
   },
   tabLabel: {
-    color: Colors.brand.white, // El texto de la píldora debe ser blanco
+    color: Colors.brand.white,
     fontSize: 14,
     fontWeight: '600',
   },

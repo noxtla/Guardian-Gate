@@ -1,3 +1,5 @@
+// components/ui/IconSymbol.tsx
+
 // Fallback for using MaterialIcons on Android and web.
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -33,6 +35,11 @@ const MAPPING: IconMapping = {
   'heart.shield.fill': 'health-and-safety', // Safety
   'wrench.and.screwdriver.fill': 'build', // Work
   'exclamationmark.bubble.fill': 'support-agent', // Ticket (Support)
+
+  // Chat Screen Icons <-- ADD THESE NEW ICONS
+  'arrow.backward': 'arrow-back', // For the back button in the chat header
+  'paperclip.fill': 'attach-file', // For the attachment icon in the input bar
+  // 'paperplane.fill': 'send', // Already mapped from previous work, used for the send button
 };
 
 export type IconSymbolName = keyof typeof MAPPING;
@@ -55,7 +62,11 @@ export function IconSymbol({
   weight?: SymbolWeight;
 }) {
   if (!MAPPING[name]) {
-    return null;
+    // Optionally log a warning for unmapped icons in development
+    if (__DEV__) {
+      console.warn(`IconSymbol: No MaterialIcons mapping found for SF Symbol "${name}"`);
+    }
+    return null; // Or return a fallback icon
   }
   return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
 }
