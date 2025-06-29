@@ -1,4 +1,4 @@
-// app/ssn.tsx
+// app/ssn.tsx (El código permanece igual que en el mensaje anterior, no necesita más cambios)
 
 import { ThemedText } from '@/components/ThemedText';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -21,29 +21,26 @@ import {
 } from 'react-native';
 
 import { globalStyles } from '@/constants/AppStyles';
-// import { AuthService } from '@/services/authService'; // Eliminado para simplificar
-// import { useAuth } from '@/context/AuthContext'; // Eliminado para simplificar
 
 export default function SsnScreen() {
   const [ssn, setSsn] = useState('');
-  // const [isLoading, setIsLoading] = useState(false); // Eliminado para simplificar
-  // --- CAMBIO CLAVE ---: isSsnValid siempre true
   const isSsnValid = ssn.length === 4;
 
-  // const { user, login } = useAuth(); // Eliminado para simplificar
-
-  // --- CAMBIO CLAVE ---: Función simplificada para navegación directa
   const handleContinue = () => {
-    if (isSsnValid) { // Todavía se respeta la longitud mínima visualmente
+    if (isSsnValid) {
       router.push('/dob');
     }
   };
+
+  const IOS_HEADER_HEIGHT = 64;
 
   return (
     <SafeAreaView style={globalStyles.darkScreenContainer}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? IOS_HEADER_HEIGHT : 0}
+      >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={[globalStyles.authScreenContentContainer, styles.containerOverrides]}>
             
@@ -53,6 +50,7 @@ export default function SsnScreen() {
                 <View style={[globalStyles.authProgressBarFill, { width: '50%' }]} />
               </View>
             </View>
+            {/* Icono de seguridad */}
             <IconSymbol name="shield.fill" size={150} color={Colors.brand.lightBlue} />
             
             <TextInput
@@ -64,21 +62,15 @@ export default function SsnScreen() {
               onChangeText={setSsn}
               maxLength={4}
               secureTextEntry
-              // editable={!isLoading} // Eliminado para simplificar
             />
             <TouchableOpacity
               style={[
                 globalStyles.primaryButton,
-                // --- CAMBIO CLAVE ---: disabled siempre false
                 !isSsnValid && globalStyles.disabledButton,
               ]}
               disabled={!isSsnValid}
-              onPress={handleContinue}> {/* Llama a la función simplificada */}
-              {/* {isLoading ? ( // Eliminado para simplificar
-                <ActivityIndicator color={Colors.brand.white} />
-              ) : ( */}
+              onPress={handleContinue}>
                 <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>
-              {/* )} */}
             </TouchableOpacity>
 
             <ThemedText style={globalStyles.infoText}>
@@ -96,7 +88,8 @@ export default function SsnScreen() {
 const styles = StyleSheet.create({
     containerOverrides: {
         justifyContent: 'space-between',
-        paddingVertical: 10,
+        paddingTop: 10,
+        paddingBottom: 40, // Espacio para el botón
         gap: 0,
     },
 });

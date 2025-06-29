@@ -5,7 +5,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
 import { ComponentProps } from 'react';
-import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native'; // <-- CORREGIDO AQUÍ
+import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
 type IconMapping = Record<string, ComponentProps<typeof MaterialIcons>['name']>;
 
@@ -16,7 +16,8 @@ type IconMapping = Record<string, ComponentProps<typeof MaterialIcons>['name']>;
  * - All icons used in the app MUST be defined here.
  */
 const MAPPING: IconMapping = {
-  'shield.fill': 'security', // Icon for login/security screens
+  // CAMBIO CLAVE AQUÍ: 'shield.fill' ahora mapea a 'privacy-tip'
+  'shield.fill': 'privacy-tip', // Icon for login/security screens
 
   // Tab Bar Icons
   'house.fill': 'home',
@@ -49,7 +50,7 @@ const MAPPING: IconMapping = {
   'arrow.right': 'arrow-forward', // Forward arrow for list items
   'door.right.hand.open.fill': 'logout', // Sign out icon
   'bolt.fill': 'flash-on', // Placeholder for activity chart (or any dynamic data)
-  'calendar': 'calendar-today', // Joined date
+  'calendar': 'calendar-today', // Joined date (used in ProfileInfo and now in YearScreen)
   'clock.fill': 'schedule', // Last active
   'person.2.fill': 'people', // Followers/Following
   'chart.bar.fill': 'bar-chart', // Contributions (or general stats)

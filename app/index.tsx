@@ -9,42 +9,50 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
-  // Alert, // Eliminado para simplificar
-  // ActivityIndicator, // Eliminado para simplificar
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import PhoneInput from '@/components/PhoneInput';
 import { Colors } from '@/constants/Colors';
 import { globalStyles } from '@/constants/AppStyles';
-// import { AuthService } from '@/services/authService'; // Eliminado para simplificar
+// import { AuthService } from '@/services/authService';
 
 export default function GuardianGateScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
-  // --- CAMBIO CLAVE ---: isPhoneValid siempre true
-  const [isPhoneValid, setIsPhoneValid] = useState(true);
+  const [isPhoneValid, setIsPhoneValid] = useState(false);
   const [isInputVisible, setIsInputVisible] = useState(false);
-  // const [isLoading, setIsLoading] = useState(false); // Eliminado para simplificar
+  const [isLoading, setIsLoading] = useState(false);
 
   const handlePhoneNumberChange = useCallback((number: string) => {
     setPhoneNumber(number);
-    // Para desarrollo, siempre considera válido después de un mínimo
-    setIsPhoneValid(number.replace(/\D/g, '').length >= 10);
   }, []);
 
   const handleValidationChange = useCallback((isValid: boolean) => {
-    // setIsPhoneValid(isValid); // No es necesario si se sobrescribe
+    setIsPhoneValid(isValid);
   }, []);
 
-  // --- CAMBIO CLAVE ---: Función simplificada para navegación directa
-  const handleContinue = () => {
-    // Si el input no está visible, lo hace visible. Si ya lo está, navega.
+  const handleContinue = async () => {
     if (!isInputVisible) {
       setIsInputVisible(true);
-    } else {
+      return;
+    }
+
+    if (!isPhoneValid || isLoading) return;
+
+    setIsLoading(true);
+    try {
+      // await AuthService.sendOtp(phoneNumber);
+      console.log('Simulando envío de OTP al número:', phoneNumber);
+      await new Promise(resolve => setTimeout(resolve, 1000));
       router.push('/otc');
+    } catch (error) {
+      // Alert.alert('Error', 'Could not send the code. Please try again.');
+      console.error(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -55,7 +63,7 @@ export default function GuardianGateScreen() {
         style={styles.flexContainer}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={[globalStyles.contentContainer, styles.containerPadding]}>
-            <IconSymbol name="shield.fill" size={150} color={Colors.brand.lightBlue} />
+            <FontAwesome6 name="user-shield" size={150} color={Colors.brand.lightBlue} />
 
             <View style={styles.inputContainer}>
               {isInputVisible ? (
@@ -67,22 +75,21 @@ export default function GuardianGateScreen() {
                   <TouchableOpacity
                     style={[
                       globalStyles.primaryButton,
-                      // --- CAMBIO CLAVE ---: disabled siempre false (excepto si el número es muy corto)
-                      !isPhoneValid && globalStyles.disabledButton,
+                      (!isPhoneValid || isLoading) && globalStyles.disabledButton,
                     ]}
-                    disabled={!isPhoneValid} // Todavía respeta la longitud mínima visualmente
-                    onPress={handleContinue}> {/* Llama a la función simplificada */}
-                    {/* {isLoading ? ( // Eliminado para simplificar
+                    disabled={!isPhoneValid || isLoading}
+                    onPress={handleContinue}>
+                    {isLoading ? (
                       <ActivityIndicator color={Colors.brand.white} />
-                    ) : ( */}
+                    ) : (
                       <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>
-                    {/* )} */}
+                    )}
                   </TouchableOpacity>
                 </>
               ) : (
                 <TouchableOpacity
                   style={globalStyles.primaryButton}
-                  onPress={handleContinue}> {/* Llama a la función simplificada */}
+                  onPress={handleContinue}>
                   <ThemedText style={globalStyles.primaryButtonText}>
                     Enter your phone number
                   </ThemedText>
@@ -90,9 +97,9 @@ export default function GuardianGateScreen() {
               )}
             </View>
 
+            {/* --- ESTA ES LA LÍNEA CORREGIDA --- */}
             <ThemedText style={globalStyles.infoText}>
-              For currently active employees only.{'\n'}Any fraudulent activity will be
-              penalized.
+              {'For currently active employees only.\nAny fraudulent activity will be penalized.'}
             </ThemedText>
           </View>
         </TouchableWithoutFeedback>

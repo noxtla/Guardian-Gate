@@ -42,6 +42,7 @@ export const globalStyles = StyleSheet.create({
     color: Colors.brand.white,
     fontSize: 18,
     fontWeight: '600',
+    fontFamily: 'Lato-Bold',
   },
 
   // ---- Textos ----
@@ -50,6 +51,7 @@ export const globalStyles = StyleSheet.create({
     color: Colors.brand.gray,
     textAlign: 'center',
     marginBottom: 10,
+    fontFamily: 'Lato-Regular',
   },
   
   // ---- Inputs ----
@@ -61,6 +63,7 @@ export const globalStyles = StyleSheet.create({
     fontSize: 18,
     color: Colors.brand.darkGray,
     textAlign: 'center',
+    fontFamily: 'Lato-Regular',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -69,6 +72,7 @@ export const globalStyles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+    textAlignVertical: 'center',
   },
 
   // --- NUEVOS ESTILOS COMUNES PARA EL FLUJO DE AUTENTICACIÓN ---
@@ -99,6 +103,7 @@ export const globalStyles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
     maxWidth: '90%',
+    fontFamily: 'OpenSans-SemiBold',
   },
   // Añadimos un estilo general para el contenedor de pantallas de autenticación
   // que tienen el mismo padding y alineación central.
@@ -160,13 +165,13 @@ export const globalStyles = StyleSheet.create({
     fontSize: 12,
     color: Colors.brand.gray,
     marginTop: 2,
-    fontFamily: 'OpenSans-Regular',
+    fontFamily: 'Lato-Regular',
   },
   notificationContent: {
     fontSize: 14,
     color: Colors.brand.darkGray,
     marginTop: 4,
-    fontFamily: 'OpenSans-Regular',
+    fontFamily: 'Lato-Regular',
   },
   notificationUnreadDot: {
     width: 10,
@@ -206,7 +211,7 @@ export const globalStyles = StyleSheet.create({
   profileOptionText: {
     fontSize: 16,
     color: Colors.brand.darkBlue,
-    fontFamily: 'OpenSans-Regular',
+    fontFamily: 'Lato-Regular',
     flex: 1,
   },
   profileOptionIconContainer: {
@@ -261,14 +266,14 @@ export const globalStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textTransform: 'uppercase', // "EDIT PROFILE" en mayúsculas
-    fontFamily: 'OpenSans-SemiBold', // Utiliza una fuente semibold si es posible
+    fontFamily: 'Lato-Bold', // Utiliza una fuente semibold si es posible
   },
   usernameText: {
     fontSize: 14,
     color: Colors.brand.gray, // Color más claro para el username
     marginTop: 5, // Espacio debajo del nombre
     marginBottom: 5, // Espacio encima de la posición/botón
-    fontFamily: 'OpenSans-Regular',
+    fontFamily: 'Lato-Regular',
   },
 
   // --- ESTILOS PARA HORIZONTAL TAB BAR ---

@@ -18,7 +18,7 @@ import {
   // ActivityIndicator, // Eliminado para simplificar
 } from 'react-native';
 import { globalStyles } from '@/constants/AppStyles';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import { IconSymbol } from '@/components/ui/IconSymbol'; // Asegúrate de que esta importación esté presente
 import { router } from 'expo-router';
 // import { AuthService } from '@/services/authService'; // Eliminado para simplificar
 // import { useAuth } from '@/context/AuthContext'; // Eliminado para simplificar
@@ -54,7 +54,8 @@ export default function YearScreen() {
               </View>
             </View>
 
-            <IconSymbol name="paperplane.fill" size={150} color={Colors.brand.lightBlue} />
+            {/* CAMBIO AQUÍ: Usamos IconSymbol con el nombre "calendar" */}
+            <IconSymbol name="calendar" size={150} color={Colors.brand.lightBlue} />
 
             <TextInput
               style={globalStyles.textInput}
