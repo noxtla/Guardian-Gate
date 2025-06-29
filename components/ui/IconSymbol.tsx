@@ -1,3 +1,5 @@
+// components/ui/IconSymbol.tsx
+
 // Fallback for using MaterialIcons on Android and web.
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -14,8 +16,8 @@ type IconMapping = Record<string, ComponentProps<typeof MaterialIcons>['name']>;
  * - All icons used in the app MUST be defined here.
  */
 const MAPPING: IconMapping = {
-  // --- LÍNEA AÑADIDA ---
-  'shield.fill': 'security', // Icon for login/security screens
+  // CAMBIO CLAVE AQUÍ: 'shield.fill' ahora mapea a 'privacy-tip'
+  'shield.fill': 'privacy-tip', // Icon for login/security screens
 
   // Tab Bar Icons
   'house.fill': 'home',
@@ -33,6 +35,25 @@ const MAPPING: IconMapping = {
   'heart.shield.fill': 'health-and-safety', // Safety
   'wrench.and.screwdriver.fill': 'build', // Work
   'exclamationmark.bubble.fill': 'support-agent', // Ticket (Support)
+
+  // Chat Screen Icons
+  'arrow.backward': 'arrow-back', // For the back button in the chat header
+  'paperclip.fill': 'attach-file', // For the attachment icon in the input bar
+  'paperplane.fill': 'send', // Already mapped from previous work, used for the send button
+
+  // Notification Screen Icons
+  'rectangle.fill.on.rectangle.fill': 'data-usage', // Generic system/server icon for SystemTreeService
+
+  // Profile Screen Icons
+  'gearshape.fill': 'settings', // Settings icon for profile
+  'arrow.left': 'arrow-back', // Back arrow for Edit Profile page
+  'arrow.right': 'arrow-forward', // Forward arrow for list items
+  'door.right.hand.open.fill': 'logout', // Sign out icon
+  'bolt.fill': 'flash-on', // Placeholder for activity chart (or any dynamic data)
+  'calendar': 'calendar-today', // Joined date (used in ProfileInfo and now in YearScreen)
+  'clock.fill': 'schedule', // Last active
+  'person.2.fill': 'people', // Followers/Following
+  'chart.bar.fill': 'bar-chart', // Contributions (or general stats)
 };
 
 export type IconSymbolName = keyof typeof MAPPING;
@@ -47,6 +68,7 @@ export function IconSymbol({
   size = 24,
   color,
   style,
+  weight = 'regular',
 }: {
   name: IconSymbolName;
   size?: number;
@@ -55,7 +77,11 @@ export function IconSymbol({
   weight?: SymbolWeight;
 }) {
   if (!MAPPING[name]) {
-    return null;
+    // Optionally log a warning for unmapped icons in development
+    if (__DEV__) {
+      console.warn(`IconSymbol: No MaterialIcons mapping found for SF Symbol "${name}"`);
+    }
+    return null; // Or return a fallback icon
   }
   return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
 }

@@ -9,19 +9,22 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import PhoneInput from '@/components/PhoneInput';
 import { Colors } from '@/constants/Colors';
 import { globalStyles } from '@/constants/AppStyles';
+// import { AuthService } from '@/services/authService';
 
 export default function GuardianGateScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isPhoneValid, setIsPhoneValid] = useState(false);
   const [isInputVisible, setIsInputVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handlePhoneNumberChange = useCallback((number: string) => {
     setPhoneNumber(number);
@@ -31,6 +34,28 @@ export default function GuardianGateScreen() {
     setIsPhoneValid(isValid);
   }, []);
 
+  const handleContinue = async () => {
+    if (!isInputVisible) {
+      setIsInputVisible(true);
+      return;
+    }
+
+    if (!isPhoneValid || isLoading) return;
+
+    setIsLoading(true);
+    try {
+      // await AuthService.sendOtp(phoneNumber);
+      console.log('Simulando envío de OTP al número:', phoneNumber);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      router.push('/otc');
+    } catch (error) {
+      // Alert.alert('Error', 'Could not send the code. Please try again.');
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={globalStyles.darkScreenContainer} edges={['bottom']}>
       <KeyboardAvoidingView
@@ -38,7 +63,7 @@ export default function GuardianGateScreen() {
         style={styles.flexContainer}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={[globalStyles.contentContainer, styles.containerPadding]}>
-            <IconSymbol name="shield.fill" size={150} color={Colors.brand.lightBlue} />
+            <FontAwesome6 name="user-shield" size={150} color={Colors.brand.lightBlue} />
 
             <View style={styles.inputContainer}>
               {isInputVisible ? (
@@ -50,17 +75,21 @@ export default function GuardianGateScreen() {
                   <TouchableOpacity
                     style={[
                       globalStyles.primaryButton,
-                      !isPhoneValid && globalStyles.disabledButton,
+                      (!isPhoneValid || isLoading) && globalStyles.disabledButton,
                     ]}
-                    disabled={!isPhoneValid}
-                    onPress={() => router.push('/otc')}>
-                    <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>
+                    disabled={!isPhoneValid || isLoading}
+                    onPress={handleContinue}>
+                    {isLoading ? (
+                      <ActivityIndicator color={Colors.brand.white} />
+                    ) : (
+                      <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>
+                    )}
                   </TouchableOpacity>
                 </>
               ) : (
                 <TouchableOpacity
                   style={globalStyles.primaryButton}
-                  onPress={() => setIsInputVisible(true)}>
+                  onPress={handleContinue}>
                   <ThemedText style={globalStyles.primaryButtonText}>
                     Enter your phone number
                   </ThemedText>
@@ -68,9 +97,9 @@ export default function GuardianGateScreen() {
               )}
             </View>
 
+            {/* --- ESTA ES LA LÍNEA CORREGIDA --- */}
             <ThemedText style={globalStyles.infoText}>
-              For currently active employees only.{'\n'}Any fraudulent activity will be
-              penalized.
+              {'For currently active employees only.\nAny fraudulent activity will be penalized.'}
             </ThemedText>
           </View>
         </TouchableWithoutFeedback>

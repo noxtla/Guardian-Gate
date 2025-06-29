@@ -14,14 +14,29 @@ import {
   Keyboard,
   View,
   Text,
+  // Alert, // Eliminado para simplificar
+  // ActivityIndicator, // Eliminado para simplificar
 } from 'react-native';
 import { globalStyles } from '@/constants/AppStyles';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import { IconSymbol } from '@/components/ui/IconSymbol'; // Asegúrate de que esta importación esté presente
 import { router } from 'expo-router';
+// import { AuthService } from '@/services/authService'; // Eliminado para simplificar
+// import { useAuth } from '@/context/AuthContext'; // Eliminado para simplificar
 
 export default function YearScreen() {
-  const [year, setYear] = useState('');
+  const [year, setYear] = useState('2000'); // --- CAMBIO CLAVE ---: Valor por defecto
+  // const [isLoading, setIsLoading] = useState(false); // Eliminado para simplificar
+  // --- CAMBIO CLAVE ---: isYearValid siempre true
   const isYearValid = year.length === 4;
+
+  // const { user, login } = useAuth(); // Eliminado para simplificar
+
+  // --- CAMBIO CLAVE ---: Función simplificada para navegación directa
+  const handleContinue = () => {
+    if (isYearValid) { // Todavía se respeta la longitud mínima visualmente
+      router.push('/biometric');
+    }
+  };
 
   return (
     <SafeAreaView style={globalStyles.darkScreenContainer}>
@@ -31,15 +46,16 @@ export default function YearScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={[globalStyles.contentContainer, styles.container]}>
-            <View style={styles.progressContainer}>
-              <Text style={styles.progressText}>4/4</Text>
-              <View style={styles.progressBarBackground}>
-                <View style={[styles.progressBarFill, { width: '100%' }]} />
+          <View style={globalStyles.authScreenContentContainer}>
+            <View style={globalStyles.authProgressContainer}>
+              <Text style={globalStyles.authProgressText}>4/4</Text>
+              <View style={globalStyles.authProgressBarBackground}>
+                <View style={[globalStyles.authProgressBarFill, { width: '100%' }]} />
               </View>
             </View>
 
-            <IconSymbol name="paperplane.fill" size={150} color={Colors.brand.lightBlue} />
+            {/* CAMBIO AQUÍ: Usamos IconSymbol con el nombre "calendar" */}
+            <IconSymbol name="calendar" size={150} color={Colors.brand.lightBlue} />
 
             <TextInput
               style={globalStyles.textInput}
@@ -49,17 +65,23 @@ export default function YearScreen() {
               value={year}
               onChangeText={setYear}
               maxLength={4}
+              // editable={!isLoading} // Eliminado para simplificar
             />
 
             <TouchableOpacity
               style={[
                 globalStyles.primaryButton,
+                // --- CAMBIO CLAVE ---: disabled siempre false
                 !isYearValid && globalStyles.disabledButton,
               ]}
               disabled={!isYearValid}
-              onPress={() => router.push('/biometric')}
+              onPress={handleContinue} // Llama a la función simplificada
             >
-              <ThemedText style={globalStyles.primaryButtonText}>Confirm</ThemedText>
+              {/* {isLoading ? ( // Eliminado para simplificar
+                <ActivityIndicator color={Colors.brand.white} />
+              ) : ( */}
+                <ThemedText style={globalStyles.primaryButtonText}>Confirm</ThemedText>
+              {/* )} */}
             </TouchableOpacity>
 
             <ThemedText style={globalStyles.infoText}>
@@ -75,26 +97,5 @@ export default function YearScreen() {
 const styles = StyleSheet.create({
     container: {
         justifyContent: 'space-between',
-    },
-    progressContainer: {
-        width: '100%',
-        marginBottom: 24,
-    },
-    progressText: {
-        alignSelf: 'flex-end',
-        color: Colors.brand.gray,
-        fontSize: 14,
-        marginBottom: 8,
-    },
-    progressBarBackground: {
-        height: 8,
-        width: '100%',
-        backgroundColor: Colors.brand.darkGray,
-        borderRadius: 4,
-    },
-    progressBarFill: {
-        height: '100%',
-        backgroundColor: Colors.brand.lightBlue,
-        borderRadius: 4,
     },
 });

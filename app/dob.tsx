@@ -7,7 +7,7 @@ import { StyleSheet, TouchableOpacity, SafeAreaView, View, Text } from 'react-na
 import { globalStyles } from '@/constants/AppStyles';
 import { router } from 'expo-router';
 
-// --- Datos y Funciones Auxiliares ---
+// --- Datos y Funciones Auxiliares (sin cambios) ---
 const MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
@@ -20,10 +20,9 @@ const getDaysInMonth = (monthIndex: number, year: number): number => {
 };
 
 export default function DobScreen() {
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(0); // --- CAMBIO CLAVE ---: Valor por defecto
+  const [selectedDay, setSelectedDay] = useState<number | null>(1); // --- CAMBIO CLAVE ---: Valor por defecto
 
-  // Usa el año actual solo para calcular los días de febrero correctamente.
   const currentYear = new Date().getFullYear();
   const daysInMonth = useMemo(
     () => selectedMonth !== null ? getDaysInMonth(selectedMonth, currentYear) : 31,
@@ -31,7 +30,8 @@ export default function DobScreen() {
   );
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  const isFormValid = selectedMonth !== null && selectedDay !== null;
+  // --- CAMBIO CLAVE ---: isFormValid siempre true
+  const isFormValid = true; // Para desarrollo, siempre válido
 
   return (
     <SafeAreaView style={globalStyles.darkScreenContainer}>
@@ -83,8 +83,8 @@ export default function DobScreen() {
 
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[globalStyles.primaryButton, !isFormValid && globalStyles.disabledButton]}
-            disabled={!isFormValid}
+            style={[globalStyles.primaryButton /* --- CAMBIO CLAVE ---: No disabled */]}
+            // disabled={!isFormValid} // Eliminado
             onPress={() => router.push('/year')}
           >
             <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>

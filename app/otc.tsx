@@ -5,7 +5,6 @@ import { Colors } from '@/constants/Colors';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
-  StyleSheet,
   TouchableOpacity,
   SafeAreaView,
   TextInput,
@@ -15,33 +14,55 @@ import {
   Keyboard,
   View,
   Text,
+  ActivityIndicator,
+  StyleSheet,
+  Dimensions,
 } from 'react-native';
 import { globalStyles } from '@/constants/AppStyles';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 
-// --- CAMBIO CLAVE: Función para formatear el OTC ---
-const formatOtc = (text: string) => {
-  // 1. Eliminar todos los caracteres que no sean dígitos
+// Lógica de escalado (sin cambios)
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const GUIDELINE_BASE_WIDTH = 390;
+const scale = (size: number) => (SCREEN_WIDTH / GUIDELINE_BASE_WIDTH) * size;
+const moderateScale = (size: number, factor = 0.5): number => {
+  const newSize = size + (scale(size) - size) * factor;
+  return Math.round(newSize);
+};
+
+// --- 1. RESTAURAR LA FUNCIÓN formatOtc ---
+const formatOtc = (text: string): string => {
+  if (typeof text !== 'string') return ''; // Protección adicional
   const cleaned = text.replace(/\D/g, '');
-  // 2. Limitar a 6 dígitos
   const truncated = cleaned.substring(0, 6);
-  // 3. Añadir el guion si hay más de 3 dígitos
   if (truncated.length > 3) {
     return `${truncated.slice(0, 3)}-${truncated.slice(3)}`;
   }
-  // 4. Devolver el número (parcialmente) formateado
   return truncated;
 };
 
-
 export default function OtcScreen() {
   const [otc, setOtc] = useState('');
-  // --- CAMBIO CLAVE: La validación ahora ignora el guion ---
-  const isOtcValid = otc.replace(/\D/g, '').length === 6;
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // --- 2. CÁLCULO SEGURO DE isOtcValid ---
+  const isOtcValid = (otc || '').replace(/\D/g, '').length === 6;
 
   const handleOtcChange = (text: string) => {
     const formattedText = formatOtc(text);
     setOtc(formattedText);
+  };
+
+  const handleContinue = async () => {
+    if (!isOtcValid || isLoading) return;
+    setIsLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    router.push('/ssn');
+    setIsLoading(false);
+  };
+
+  const handleResend = () => {
+    console.log("Reenviando código...");
   };
 
   return (
@@ -50,43 +71,57 @@ export default function OtcScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={styles.container}>
-            <View style={styles.progressContainer}>
-              <Text style={styles.progressText}>1/4</Text>
-              <View style={styles.progressBarBackground}>
-                <View style={[styles.progressBarFill, { width: '25%' }]} />
+          <View style={globalStyles.authScreenContentContainer}>
+            
+            <View style={globalStyles.authProgressContainer}>
+              <Text style={globalStyles.authProgressText}>1/4</Text>
+              <View style={globalStyles.authProgressBarBackground}>
+                <View style={[globalStyles.authProgressBarFill, { width: '25%' }]} />
               </View>
             </View>
 
             <IconSymbol name="message.fill" size={80} color={Colors.brand.lightBlue} />
             
-            <ThemedText style={styles.title}>Enter the code we sent to your phone.</ThemedText>
+            <ThemedText style={globalStyles.authTitle}>
+              Enter the code we sent to your phone.
+            </ThemedText>
 
             <TextInput
               style={globalStyles.textInput}
-              placeholder="123-456" // Placeholder actualizado
+              placeholder="123-456"
               placeholderTextColor={Colors.brand.gray}
               keyboardType="number-pad"
               value={otc}
-              // --- CAMBIO CLAVE: Usar el nuevo manejador de cambio ---
               onChangeText={handleOtcChange}
-              // --- CAMBIO CLAVE: Aumentar la longitud máxima a 7 (6 dígitos + 1 guion) ---
               maxLength={7}
+              editable={!isLoading}
             />
 
             <TouchableOpacity
               style={[
                 globalStyles.primaryButton,
-                !isOtcValid && globalStyles.disabledButton,
+                (!isOtcValid || isLoading) && globalStyles.disabledButton,
               ]}
-              disabled={!isOtcValid}
-              onPress={() => router.push('/ssn')}>
-              <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>
+              disabled={!isOtcValid || isLoading}
+              onPress={handleContinue}>
+              {isLoading ? (
+                <ActivityIndicator color={Colors.brand.white} />
+              ) : (
+                <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>
+              )}
             </TouchableOpacity>
 
-            <ThemedText style={globalStyles.infoText}>
-              Didn't receive a code? Resend
-            </ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <ThemedText style={[globalStyles.infoText, styles.adaptiveInfoText]}>
+                    {"Didn't receive a code? "}
+                </ThemedText>
+                <TouchableOpacity onPress={handleResend}>
+                    <ThemedText style={[globalStyles.infoText, styles.adaptiveInfoText, { color: Colors.brand.lightBlue, fontWeight: 'bold' }]}>
+                        Resend
+                    </ThemedText>
+                </TouchableOpacity>
+            </View>
+            
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
@@ -95,38 +130,7 @@ export default function OtcScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    alignItems: 'center',
-    gap: 25,
-  },
-  progressContainer: {
-    width: '100%',
-  },
-  progressText: {
-    alignSelf: 'flex-end',
-    color: Colors.brand.gray,
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  progressBarBackground: {
-    height: 8,
-    width: '100%',
-    backgroundColor: Colors.brand.darkGray,
-    borderRadius: 4,
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: Colors.brand.lightBlue,
-    borderRadius: 4,
-  },
-  title: {
-    fontSize: 22,
-    color: Colors.brand.white,
-    textAlign: 'center',
-    fontWeight: '600',
-    maxWidth: '90%', 
-  },
+    adaptiveInfoText: {
+        fontSize: moderateScale(12, 0.4),
+    }
 });
