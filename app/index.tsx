@@ -1,6 +1,5 @@
 // app/index.tsx
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   TouchableOpacity,
@@ -20,14 +19,20 @@ import PhoneInput from '@/components/PhoneInput';
 import { Colors } from '@/constants/Colors';
 import { globalStyles } from '@/constants/AppStyles';
 import { apiClient } from '@/services/apiClient';
+import { PhoneAuthProvider } from 'firebase/auth';
+import { auth } from '@/firebaseConfig'; // Importamos nuestra configuración de Firebase
+
+// Para el reCAPTCHA invisible que Firebase requiere en web/entornos de prueba.
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 
 export default function GuardianGateScreen() {
-  console.log(">>>>>> RENDERIZANDO CÓDIGO CORRECTO EN APP/INDEX.TSX <<<<<<");
-
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isPhoneValid, setIsPhoneValid] = useState(false);
   const [isInputVisible, setIsInputVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Referencia para el verificador de reCAPTCHA
+  const recaptchaVerifier = useRef<FirebaseRecaptchaVerifierModal>(null);
 
   const handlePhoneNumberChange = useCallback((number: string) => {
     setPhoneNumber(number);
@@ -44,7 +49,6 @@ export default function GuardianGateScreen() {
     }
 
     if (!isPhoneValid || isLoading) return;
-
     setIsLoading(true);
 
     const cleanedNumber = phoneNumber.replace(/\D/g, '');
@@ -55,25 +59,34 @@ export default function GuardianGateScreen() {
     }
     const fullPhoneNumber = `+1${cleanedNumber}`;
 
-    console.log(`[API CALL] Intentando validar el número: ${fullPhoneNumber}`);
-
     try {
-      const response = await apiClient<{ isValid: boolean }>('', {
+      // --- PASO 1: Validación con nuestro backend ---
+      const validationResponse = await apiClient<{ isValid: boolean }>('', {
         method: 'POST',
         body: { phoneNumber: fullPhoneNumber }, 
       });
 
-      console.log(`[API RESPONSE] Respuesta del servidor:`, response);
-
-      if (response.isValid) {
-        Alert.alert('Éxito', 'Número de teléfono validado correctamente.');
-        router.push('/otc');
-      } else {
+      if (!validationResponse.isValid) {
         Alert.alert('Número no reconocido', 'El número de teléfono introducido no está registrado.');
+        setIsLoading(false);
+        return;
       }
+
+      // --- PASO 2: Envío de SMS con Firebase ---
+      const phoneProvider = new PhoneAuthProvider(auth);
+      const verificationId = await phoneProvider.verifyPhoneNumber(
+        fullPhoneNumber,
+        recaptchaVerifier.current!
+      );
+      
+      router.push({
+        pathname: '/otc',
+        params: { verificationId, phoneNumber: fullPhoneNumber },
+      });
+
     } catch (error: any) {
-      console.error('[API ERROR] Error al validar el número de teléfono:', error);
-      Alert.alert('Error', `No se pudo verificar el número. Por favor, inténtalo de nuevo.`);
+      console.error('Error durante el proceso de login:', error);
+      Alert.alert('Error', `Ocurrió un error al enviar el código de verificación: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -81,6 +94,12 @@ export default function GuardianGateScreen() {
 
   return (
     <SafeAreaView style={globalStyles.darkScreenContainer} edges={['bottom']}>
+      <FirebaseRecaptchaVerifierModal
+        ref={recaptchaVerifier}
+        firebaseConfig={auth.app.options}
+        attemptInvisibleVerification={true}
+      />
+      
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flexContainer}>
@@ -129,18 +148,18 @@ export default function GuardianGateScreen() {
 }
 
 const styles = StyleSheet.create({
-  flexContainer: {
-    flex: 1,
-  },
-  containerPadding: {
-    justifyContent: 'space-between',
-    paddingBottom: 20,
-  },
-  inputContainer: {
-    width: '100%',
-    alignItems: 'center',
-    minHeight: 150,
-    justifyContent: 'center',
-    gap: 20,
-  },
+    flexContainer: {
+        flex: 1,
+    },
+    containerPadding: {
+        justifyContent: 'space-between',
+        paddingBottom: 20,
+    },
+    inputContainer: {
+        width: '100%',
+        alignItems: 'center',
+        minHeight: 150,
+        justifyContent: 'center',
+        gap: 20,
+    },
 });

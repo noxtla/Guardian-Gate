@@ -24,10 +24,19 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "config": {
+        "firebase": {
+          "apiKey": "AIzaSy...",
+          "authDomain": "gateway-r9gl0.firebaseapp.com",
+          "projectId": "gateway-r9gl0",
+          "storageBucket": "gateway-r9gl0.appspot.com",
+          "messagingSenderId": "495846911795",
+          "appId": "1:495846911795:web:22d7e0349c1454bb0a5846"
+        }
+      }
     },
     "plugins": [
-      "@react-native-firebase/app",
       "expo-router",
       [
         "expo-splash-screen",
