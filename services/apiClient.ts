@@ -1,5 +1,5 @@
 // services/apiClient.ts
-import * as Keychain from 'react-native-keychain';
+///import * as Keychain from 'react-native-keychain';
 import { API_BASE_URL } from '@/constants/environment'; // Importa nuestra URL base
 
 interface ApiClientOptions {
@@ -35,25 +35,6 @@ export const apiClient = async <T>(endpoint: string, options?: ApiClientOptions)
     ...(customHeaders as Record<string, string>), // Fusiona las cabeceras personalizadas
   };
 
-  // --- LÓGICA DE AUTENTICACIÓN JWT (temporalmente menos estricta) ---
-  if (authenticated) {
-    try {
-      const credentials = await Keychain.getGenericPassword();
-      if (credentials && credentials.password) {
-        // Si se encuentra el token, se añade la cabecera de Autorización.
-        requestHeaders['Authorization'] = `Bearer ${credentials.password}`;
-      } else {
-        // Advertencia si la petición requiere autenticación pero no se encuentra el token.
-        // La petición continuará sin el token.
-        console.warn('Advertencia: Petición autenticada solicitada pero no se encontró token en Keychain.');
-      }
-    } catch (keychainError) {
-      // Log de error si falla la recuperación del token de Keychain.
-      // La petición continuará sin el token.
-      console.error('Error al recuperar el token de Keychain (ignorado por ahora):', keychainError);
-    }
-  }
-  // --- FIN LÓGICA DE AUTENTICACIÓN ---
 
   // Construye la URL completa del endpoint.
   // API_BASE_URL ya debe contener la URL completa del webhook de n8n (ej. ".../guardianGate").
