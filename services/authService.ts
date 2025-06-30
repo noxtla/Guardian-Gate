@@ -1,5 +1,5 @@
 // services/authService.ts
-import * as Keychain from 'react-native-keychain';
+
 import { apiClient } from './apiClient';
 
 /**
@@ -13,17 +13,13 @@ export const AuthService = {
    * @returns Una promesa que se resuelve cuando la operación es exitosa (void porque no devuelve datos importantes).
    * @throws Error si la petición falla.
    */
-
-  /**
-   * ESTA FUNCIÓN NO LA ESTAMOS USANDO AHORA, pero la dejaremos limpia.
-   * La validación del número la hacemos directamente en app/index.tsx.
-   * La dejaremos preparada para cuando la necesitemos de verdad (enviar SMS).
-   */
-  
   sendOtp: async (phoneNumber: string): Promise<void> => {
-    // La dejamos vacía por ahora, o la hacemos lanzar un error para saber si se llama por accidente.
-    console.warn("AuthService.sendOtp fue llamada, pero la lógica de validación está en app/index.tsx");
-    // No hace nada.
+    // El endpoint es ahora '', y 'action' va en el cuerpo
+    await apiClient('', {
+      method: 'POST',
+      body: { action: "send-otp", phoneNumber },
+      authenticated: false, // Esta petición no requiere un JWT (es el inicio del flujo de login)
+    });
   },
 
   /**

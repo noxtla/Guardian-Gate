@@ -3,24 +3,10 @@
 { pkgs, ... }: {
   # Which nixpkgs channel to use.
   channel = "stable-23.11"; # or "unstable"
-
   # Use https://search.nixos.org/packages to find packages
-  packages = [
-    pkgs.nodejs_20
-    # --- AÑADIDO: Paquetes para el desarrollo de Android ---
-    pkgs.android-tools
-    pkgs.jdk17
-    # ---------------------------------------------------
-  ];
-
+  packages = [ pkgs.nodejs_20 ];
   # Sets environment variables in the workspace
-  env = {
-    EXPO_USE_FAST_RESOLVER = 1;
-    # --- AÑADIDO: Variable de entorno para Java ---
-    JAVA_HOME = "${pkgs.jdk17}/lib/openjdk";
-    # ----------------------------------------------
-  };
-
+  env = { EXPO_USE_FAST_RESOLVER = 1; };
   idx = {
     # Search for the extensions you want on https://open-vsx.org/ and use "publisher.id"
     extensions = [

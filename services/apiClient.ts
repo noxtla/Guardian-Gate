@@ -1,5 +1,5 @@
 // services/apiClient.ts
-import * as Keychain from 'react-native-keychain';
+// Ya no importamos 'react-native-keychain'
 import { API_BASE_URL } from '@/constants/environment'; // Importa nuestra URL base
 
 interface ApiClientOptions {
@@ -29,35 +29,31 @@ export const apiClient = async <T>(endpoint: string, options?: ApiClientOptions)
   } = options || {}; // Si no se proporcionan opciones, usa un objeto vacío
 
   // Inicializa las cabeceras de la petición.
-  // Se tipa como Record<string, string> para permitir la adición de propiedades por índice.
   const requestHeaders: Record<string, string> = {
     'Content-Type': 'application/json', // Cabecera por defecto para JSON
     ...(customHeaders as Record<string, string>), // Fusiona las cabeceras personalizadas
   };
 
-  // --- LÓGICA DE AUTENTICACIÓN JWT (temporalmente menos estricta) ---
-  if (authenticated) {
-    try {
-      const credentials = await Keychain.getGenericPassword();
-      if (credentials && credentials.password) {
-        // Si se encuentra el token, se añade la cabecera de Autorización.
-        requestHeaders['Authorization'] = `Bearer ${credentials.password}`;
-      } else {
-        // Advertencia si la petición requiere autenticación pero no se encuentra el token.
-        // La petición continuará sin el token.
-        console.warn('Advertencia: Petición autenticada solicitada pero no se encontró token en Keychain.');
-      }
-    } catch (keychainError) {
-      // Log de error si falla la recuperación del token de Keychain.
-      // La petición continuará sin el token.
-      console.error('Error al recuperar el token de Keychain (ignorado por ahora):', keychainError);
-    }
-  }
+  // --- LÓGICA DE AUTENTICACIÓN JWT ---
+  // En Managed Workflow, si necesitas enviar un JWT (ej. Firebase ID Token) a tu backend,
+  // lo obtendrías de `firebase/auth` y lo pasarías en `customHeaders`.
+  // `react-native-keychain` NO se usa aquí.
+  // Ejemplo (si `authenticated` fuera true y tuvieras un token):
+  // if (authenticated && customHeaders['Authorization']) { // Asume que el token ya viene en customHeaders
+  //   // No hacemos nada, el token ya está adjunto.
+  // } else if (authenticated) {
+  //   // Si necesitas un token de Firebase aquí, lo obtendrías del usuario actual.
+  //   // const user = auth.currentUser;
+  //   // if (user) {
+  //   //   const idToken = await user.getIdToken();
+  //   //   requestHeaders['Authorization'] = `Bearer ${idToken}`;
+  //   // } else {
+  //   //   console.warn('Advertencia: Petición autenticada solicitada pero usuario de Firebase no autenticado.');
+  //   // }
+  // }
   // --- FIN LÓGICA DE AUTENTICACIÓN ---
 
   // Construye la URL completa del endpoint.
-  // API_BASE_URL ya debe contener la URL completa del webhook de n8n (ej. ".../guardianGate").
-  // Si 'endpoint' es una cadena vacía (''), la URL será simplemente API_BASE_URL.
   const url = `${API_BASE_URL}${endpoint}`;
 
   // Configura las opciones para la función fetch.
@@ -81,12 +77,11 @@ export const apiClient = async <T>(endpoint: string, options?: ApiClientOptions)
         // Si el cuerpo no es JSON, usa un mensaje de error HTTP genérico.
         errorData = { message: `Error HTTP! Estado: ${response.status}` };
       }
-      // Construye un mensaje de error combinando el del servidor o uno genérico.
       const errorMessage = errorData.message || `La petición falló con el estado ${response.status}`;
       throw new Error(errorMessage); // Lanza un error para ser capturado en la capa de servicio o UI.
     }
 
-    // Si la respuesta es exitosa, parsea y devuelve el cuerpo JSON.
+    // Si la respuesta es exitosa, parsear y devolver el cuerpo JSON.
     return response.json();
   } catch (networkError: any) {
     // Captura errores de red (ej. sin conexión a internet) o errores lanzados desde el bloque 'try'.
