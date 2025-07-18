@@ -16,10 +16,6 @@ interface MenuItemData {
 const menuItems: MenuItemData[] = [
   { key: '1', title: 'Attendance', icon: 'person.badge.clock.fill' },
   { key: '2', title: 'Vehicles', icon: 'car.fill' },
-  { key: '3', title: 'Job Briefing', icon: 'list.bullet.clipboard.fill' },
-  { key: '4', title: 'Safety', icon: 'heart.shield.fill' },
-  { key: '5', title: 'Work', icon: 'wrench.and.screwdriver.fill' },
-  { key: '6', title: 'Ticket', icon: 'exclamationmark.bubble.fill' },
 ];
 
 const MenuItem = ({ item }: { item: MenuItemData }) => (

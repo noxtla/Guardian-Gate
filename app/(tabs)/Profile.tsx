@@ -18,8 +18,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import ProfileHeader from '@/components/profile/ProfileHeader';
-import ProfileInfo from '@/components/profile/ProfileInfo';
-import ProfileStats from '@/components/profile/ProfileStats';
+// --- REMOVED: ProfileInfo and ProfileStats components are no longer needed.
+// import ProfileInfo from '@/components/profile/ProfileInfo';
+// import ProfileStats from '@/components/profile/ProfileStats';
 
 interface UserData {
   Name: string;
@@ -29,18 +30,13 @@ interface UserData {
 }
 
 const mockUserData: UserData = {
-  Name: "Jesus Salvador Cortes Gutierrez",
-  username: "jesus-salvador-cortes-gutierrez-6489",
-  Position: "Computer Engineer",
+  Name: "User",
+  username: "1000258060",
+  Position: "Trimmer",
 };
 
-const mockProfileData = {
-  contributions: 10,
-  followers: 0,
-  following: 11,
-  joinedDate: "May 8, 2025",
-  lastActive: "Active 3d ago",
-};
+// --- REMOVED: mockProfileData is no longer used as the components displaying this data have been removed.
+// const mockProfileData = { ... };
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -91,19 +87,14 @@ export default function ProfileScreen() {
             <TouchableOpacity style={globalStyles.editProfileButton} onPress={handleEditProfile}>
               <ThemedText style={globalStyles.editProfileButtonText}>EDIT PROFILE</ThemedText>
             </TouchableOpacity>
-            <ProfileInfo lastActive={mockProfileData.lastActive} joinedDate={mockProfileData.joinedDate} />
-            <ProfileStats contributions={mockProfileData.contributions} followers={mockProfileData.followers} following={mockProfileData.following} />
-            <View style={styles.separator} />
-            <View style={styles.activityContainer}>
-              <ThemedText style={globalStyles.profileSectionHeader}>Activity</ThemedText>
-              <View style={styles.activityChartPlaceholder}>
-                <IconSymbol name="bolt.fill" size={50} color={Colors.brand.gray} />
-                <ThemedText style={globalStyles.infoText}>Activity chart coming soon!</ThemedText>
-              </View>
-            </View>
+            
+            {/* --- REMOVED ---
+              The ProfileInfo, ProfileStats, separator, and Activity sections
+              have been removed to simplify the UI as per your request.
+            */}
+
             <TouchableOpacity style={[globalStyles.primaryButton, styles.signOutButton]} onPress={handleSignOut}>
               <IconSymbol name="door.right.hand.open.fill" size={20} color={Colors.brand.white} style={styles.signOutIcon} />
-              {/* --- CORRECTED LINE --- */}
               <ThemedText style={globalStyles.primaryButtonText}>Sign Out</ThemedText>
             </TouchableOpacity>
           </View>
@@ -115,7 +106,6 @@ export default function ProfileScreen() {
   );
 }
 
-// NOTE: I am also removing the unused `skoolLogo` style and adding `headerTitle` to prevent future confusion.
 const styles = StyleSheet.create({
   loadingContainer: { justifyContent: 'center', alignItems: 'center' },
   headerContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15, paddingBottom: 15, backgroundColor: Colors.brand.white, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.brand.lightGray },
@@ -124,9 +114,14 @@ const styles = StyleSheet.create({
   threeDotsIconPlaceholder: { padding: 5 },
   listContentContainer: { paddingBottom: Platform.OS === 'ios' ? 100 : 80 },
   contentPadding: { paddingHorizontal: 20, paddingTop: 10 },
-  separator: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.brand.lightGray, marginVertical: 20 },
-  activityContainer: { marginBottom: 25 },
-  activityChartPlaceholder: { backgroundColor: Colors.brand.lightGray, borderRadius: 10, padding: 20, height: 150, justifyContent: 'center', alignItems: 'center' },
-  signOutButton: { backgroundColor: '#D32F2F', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 20 },
+  // --- REMOVED: Unused styles for separator and activityContainer.
+  signOutButton: { 
+    backgroundColor: '#D32F2F', 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    gap: 8, 
+    marginTop: 40, // Added margin to create space after removing other elements
+  },
   signOutIcon: { marginRight: 5 },
 });
