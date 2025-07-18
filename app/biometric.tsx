@@ -11,23 +11,38 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
-  // Alert, // Eliminado para simplificar
-  // ActivityIndicator, // Eliminado para simplificar
+  ActivityIndicator, // Re-enabled for loading state
 } from 'react-native';
 import { globalStyles } from '@/constants/AppStyles';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-// import * as LocalAuthentication from 'expo-local-authentication'; // Eliminado para simplificar
-// import { AuthService } from '@/services/authService'; // Eliminado para simplificar
-// import { useAuth } from '@/context/AuthContext'; // Eliminado para simplificar
-// import { useState } from 'react'; // Eliminado para simplificar
+import { useAuth } from '@/context/AuthContext'; // Re-enabled to access login
+import { useState } from 'react'; // Re-enabled for loading state
 
 export default function BiometricScreen() {
-  // const { user, updateBiometricsStatus } = useAuth(); // Eliminado para simplificar
-  // const [isLoading, setIsLoading] = useState(false); // Eliminado para simplificar
+  const { login } = useAuth(); // Get the login function from our context
+  const [isLoading, setIsLoading] = useState(false);
 
-  // --- CAMBIO CLAVE ---: Función simplificada para navegación directa a tabs
-  const handleConfirm = () => {
-    router.replace('/(tabs)'); // Directamente a las tabs
+  // --- CORRECTED LOGIC ---
+  // This function now updates the global auth state before navigating.
+  const handleConfirm = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+
+    try {
+      // 1. Log the user in. This updates AuthContext, setting isAuthenticated = true.
+      // The root layout will react to this change, replacing the login stack
+      // with the authenticated stack.
+      await login('dummy-manual-login-token', 'manual-user-123', true);
+
+      // 2. Now that the stack is correct, replace the current screen.
+      // This will land on the "(tabs)" screen, which is now the root.
+      router.replace('/(tabs)');
+    } catch (error) {
+      console.error('Failed to complete the login process:', error);
+      // Optionally show an alert to the user here
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -45,15 +60,18 @@ export default function BiometricScreen() {
             </ThemedText>
 
             <TouchableOpacity
-              style={globalStyles.primaryButton}
-              onPress={handleConfirm} // Llama a la función simplificada
-              // disabled={isLoading} // Eliminado para simplificar
+              style={[
+                globalStyles.primaryButton,
+                isLoading && globalStyles.disabledButton, // Visually disable when loading
+              ]}
+              onPress={handleConfirm}
+              disabled={isLoading} // Functionally disable when loading
             >
-              {/* {isLoading ? ( // Eliminado para simplificar
+              {isLoading ? (
                 <ActivityIndicator color={Colors.brand.white} />
-              ) : ( */}
+              ) : (
                 <ThemedText style={globalStyles.primaryButtonText}>Verify Identity</ThemedText>
-              {/* )} */}
+              )}
             </TouchableOpacity>
 
             <ThemedText style={globalStyles.infoText}>

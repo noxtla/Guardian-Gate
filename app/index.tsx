@@ -25,7 +25,7 @@ export default function GuardianGateScreen() {
   const [isPhoneValid, setIsPhoneValid] = useState(false);
   const [isInputVisible, setIsInputVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false); // For phone number 'Continue' button
-  const [isLoadingFaceId, setIsLoadingFaceId] = useState(false); // NEW: For FaceId button
+  const [isLoadingFaceId, setIsLoadingFaceId] = useState(false); // For FaceId button
 
   const { login } = useAuth(); // Destructure login from useAuth
 
@@ -48,7 +48,7 @@ export default function GuardianGateScreen() {
     setIsLoading(true);
     try {
       // await AuthService.sendOtp(phoneNumber);
-      console.log('Simulando envío de OTP al número:', phoneNumber);
+      console.log('Simulating sending OTP to:', phoneNumber);
       await new Promise(resolve => setTimeout(resolve, 1000));
       router.push('/otc');
     } catch (error) {
@@ -59,27 +59,17 @@ export default function GuardianGateScreen() {
     }
   };
 
-  // NEW: Handler for FaceId login
   const handleFaceIdLogin = async () => {
     console.log('Attempting FaceId login...');
     setIsLoadingFaceId(true);
     try {
-      // Simulate successful login via FaceId by calling login from AuthContext
-      // Provide dummy token, userId, and set hasBiometricsEnabled to true
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call delay
       await login('dummy-faceid-token', 'faceid-user-123', true);
-      console.log('AuthContext login called, isAuthenticated should be true.');
-      // Explicitly navigate after login. This ensures navigation regardless of
-      // how _layout.tsx reacts to the isAuthenticated state change.
       router.replace('/(tabs)');
-      console.log('Navigated to /(tabs)');
     } catch (error) {
       console.error('Error during FaceId login:', error);
-      // Optionally show an alert to the user
-      // Alert.alert('Login Failed', 'Could not log in with FaceId. Please try again.');
     } finally {
       setIsLoadingFaceId(false);
-      console.log('FaceId login process finished.');
     }
   };
 
@@ -114,32 +104,34 @@ export default function GuardianGateScreen() {
                   </TouchableOpacity>
                 </>
               ) : (
-                <TouchableOpacity
-                  style={globalStyles.primaryButton}
-                  onPress={handleContinue}>
-                  <ThemedText style={globalStyles.primaryButtonText}>
-                    Enter your phone number
-                  </ThemedText>
-                </TouchableOpacity>
-              )}
+                <>
+                  <TouchableOpacity
+                    style={globalStyles.primaryButton}
+                    onPress={handleContinue}>
+                    <ThemedText style={globalStyles.primaryButtonText}>
+                      Enter your phone number
+                    </ThemedText>
+                  </TouchableOpacity>
 
-              {/* MODIFIED: Button for FaceId login with loading state and explicit navigation */}
-              <TouchableOpacity
-                style={[
-                  globalStyles.primaryButton,
-                  isLoadingFaceId && globalStyles.disabledButton, // Disable while loading
-                ]}
-                disabled={isLoadingFaceId} // Disable while loading
-                onPress={handleFaceIdLogin} // Use the new handler
-              >
-                {isLoadingFaceId ? ( // Show activity indicator if loading
-                  <ActivityIndicator color={Colors.brand.white} />
-                ) : (
-                  <ThemedText style={globalStyles.primaryButtonText}>
-                    Enter with FaceId
-                  </ThemedText>
-                )}
-              </TouchableOpacity>
+                  {/* Button for FaceId login */}
+                  <TouchableOpacity
+                    style={[
+                      globalStyles.primaryButton,
+                      isLoadingFaceId && globalStyles.disabledButton,
+                    ]}
+                    disabled={isLoadingFaceId}
+                    onPress={handleFaceIdLogin}
+                  >
+                    {isLoadingFaceId ? (
+                      <ActivityIndicator color={Colors.brand.white} />
+                    ) : (
+                      <ThemedText style={globalStyles.primaryButtonText}>
+                        Enter with FaceId
+                      </ThemedText>
+                    )}
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
 
             <ThemedText style={globalStyles.infoText}>
@@ -165,6 +157,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 150,
     justifyContent: 'center',
-    gap: 20, // This gap will now apply between all children
+    gap: 20,
   },
 });
