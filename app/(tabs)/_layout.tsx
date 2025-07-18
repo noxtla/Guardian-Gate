@@ -15,27 +15,23 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 
-// CustomTabBar (no changes needed here for this step)
+// CustomTabBar
 function CustomTabBar({ state, descriptors, navigation }: any) {
   const { width } = useWindowDimensions();
-  const TAB_BAR_HEIGHT = 80;
   const NUMBER_OF_TABS = state.routes.length;
   const TAB_ITEM_WIDTH = width / NUMBER_OF_TABS;
 
   const translateX = useSharedValue(0);
-  const pillWidth = useSharedValue(TAB_ITEM_WIDTH);
 
   useEffect(() => {
-    const activeTab = state.routes[state.index];
     const targetX = state.index * TAB_ITEM_WIDTH;
-    
     translateX.value = withTiming(targetX, { duration: 300, easing: Easing.out(Easing.quad) });
   }, [state.index, width, TAB_ITEM_WIDTH]);
 
   const pillAnimatedStyle = useAnimatedStyle(() => {
     return {
       transform: [{ translateX: translateX.value }],
-      width: pillWidth.value,
+      width: TAB_ITEM_WIDTH,
       height: '100%',
       position: 'absolute',
       borderRadius: 25,
@@ -45,37 +41,23 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
   });
 
   return (
-    <View style={[styles.tabBarContainer, { width }]}>
+    <View style={styles.tabBarContainer}>
       <Animated.View style={pillAnimatedStyle} />
 
       {state.routes.map((route: any, index: number) => {
         const { options } = descriptors[route.key];
-        const label =
-          options.tabBarLabel !== undefined
-            ? options.tabBarLabel
-            : options.title !== undefined
-            ? options.title
-            : route.name;
-
+        const label = options.title !== undefined ? options.title : route.name;
         const isFocused = state.index === index;
 
         const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-
+          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
           if (!isFocused && !event.defaultPrevented) {
             navigation.navigate(route.name, route.params);
           }
         };
 
         const onLongPress = () => {
-          navigation.emit({
-            type: 'tabLongPress',
-            target: route.key,
-          });
+          navigation.emit({ type: 'tabLongPress', target: route.key });
         };
 
         return (
@@ -111,7 +93,7 @@ export default function TabLayout() {
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
-        headerShown: false, // The parent layout already provides a header
+        headerShown: false,
       }}>
       <Tabs.Screen
         name="index"
@@ -125,7 +107,6 @@ export default function TabLayout() {
         options={{
           title: 'Messages',
           tabBarIcon: ({ color }) => <IconSymbol name="message.fill" color={color} size={28} />,
-          headerShown: false, // <--- ADD THIS LINE to hide the default header for this screen
         }}
       />
       <Tabs.Screen
@@ -133,7 +114,6 @@ export default function TabLayout() {
         options={{
           title: 'Notifications',
           tabBarIcon: ({ color }) => <IconSymbol name="bell.fill" color={color} size={28} />,
-          headerShown: false, // <--- ADD THIS LINE to hide the default header for this screen
         }}
       />
       <Tabs.Screen
