@@ -67,7 +67,7 @@ export default function ProfileScreen() {
       <TouchableOpacity style={styles.menuIconPlaceholder}>
         <IconSymbol name="list.bullet" size={24} color={Colors.brand.darkBlue} />
       </TouchableOpacity>
-      <ThemedText style={styles.skoolLogo}>skool</ThemedText>
+      <ThemedText style={styles.headerTitle}>Profile</ThemedText>
       <TouchableOpacity style={styles.threeDotsIconPlaceholder}>
         <IconSymbol name="ellipsis" size={24} color={Colors.brand.darkBlue} />
       </TouchableOpacity>
@@ -103,6 +103,7 @@ export default function ProfileScreen() {
             </View>
             <TouchableOpacity style={[globalStyles.primaryButton, styles.signOutButton]} onPress={handleSignOut}>
               <IconSymbol name="door.right.hand.open.fill" size={20} color={Colors.brand.white} style={styles.signOutIcon} />
+              {/* --- CORRECTED LINE --- */}
               <ThemedText style={globalStyles.primaryButtonText}>Sign Out</ThemedText>
             </TouchableOpacity>
           </View>
@@ -114,11 +115,12 @@ export default function ProfileScreen() {
   );
 }
 
+// NOTE: I am also removing the unused `skoolLogo` style and adding `headerTitle` to prevent future confusion.
 const styles = StyleSheet.create({
   loadingContainer: { justifyContent: 'center', alignItems: 'center' },
   headerContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15, paddingBottom: 15, backgroundColor: Colors.brand.white, height: Platform.OS === 'ios' ? 100 : 80, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.brand.lightGray },
   menuIconPlaceholder: { padding: 5 },
-  skoolLogo: { fontSize: 28, fontWeight: 'bold', color: '#E86F28', fontFamily: 'SpaceMono' },
+  headerTitle: { fontSize: 20, fontWeight: '600', color: Colors.brand.darkBlue, fontFamily: 'OpenSans-SemiBold' },
   threeDotsIconPlaceholder: { padding: 5 },
   listContentContainer: { paddingBottom: Platform.OS === 'ios' ? 100 : 80 },
   contentPadding: { paddingHorizontal: 20, paddingTop: 10 },

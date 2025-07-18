@@ -11,7 +11,7 @@ import { TouchableOpacity, Platform, Dimensions } from 'react-native';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+// import { IconSymbol } from '@/components/ui/IconSymbol'; // <-- REMOVED: No longer needed.
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { useEffect } from 'react';
 
@@ -28,12 +28,12 @@ const moderateScale = (size: number, factor = 0.5): number => {
 // --- FIN: LÓGICA DE CÁLCULO LOCAL ---
 
 
-// Componente para el ícono de la cámara (sin cambios)
-const HeaderCameraIcon = () => (
-  <TouchableOpacity style={{ marginRight: 15 }}>
-    <IconSymbol name="camera.fill" color={Colors.brand.white} size={26} />
-  </TouchableOpacity>
-);
+// --- REMOVED: The HeaderCameraIcon component is no longer needed. ---
+// const HeaderCameraIcon = () => (
+//   <TouchableOpacity style={{ marginRight: 15 }}>
+//     <IconSymbol name="camera.fill" color={Colors.brand.white} size={26} />
+//   </TouchableOpacity>
+// );
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -106,7 +106,8 @@ function RootLayoutNav() {
             headerShown: true,
             headerTitle: 'Tree Service',
             headerBackVisible: false,
-            headerRight: () => <HeaderCameraIcon />,
+            // --- REMOVED: The headerRight property is no longer needed. ---
+            // headerRight: () => <HeaderCameraIcon />,
             headerTitleStyle: {
               fontFamily: 'OpenSans-SemiBold',
               fontSize: 22,

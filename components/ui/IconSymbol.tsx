@@ -25,8 +25,8 @@ const MAPPING: IconMapping = {
   'bell.fill': 'notifications',
   'person.fill': 'person',
 
-  // Header Icon
-  'camera.fill': 'photo-camera',
+  // --- REMOVED: The camera icon mapping is no longer needed. ---
+  // 'camera.fill': 'camera-alt',
 
   // Home Screen Grid Icons
   'person.badge.clock.fill': 'badge', // Attendance
