@@ -118,7 +118,7 @@ export default function ProfileScreen() {
 // NOTE: I am also removing the unused `skoolLogo` style and adding `headerTitle` to prevent future confusion.
 const styles = StyleSheet.create({
   loadingContainer: { justifyContent: 'center', alignItems: 'center' },
-  headerContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15, paddingBottom: 15, backgroundColor: Colors.brand.white, height: Platform.OS === 'ios' ? 100 : 80, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.brand.lightGray },
+  headerContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15, paddingBottom: 15, backgroundColor: Colors.brand.white, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.brand.lightGray },
   menuIconPlaceholder: { padding: 5 },
   headerTitle: { fontSize: 20, fontWeight: '600', color: Colors.brand.darkBlue, fontFamily: 'OpenSans-SemiBold' },
   threeDotsIconPlaceholder: { padding: 5 },

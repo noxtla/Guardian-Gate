@@ -98,7 +98,16 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15, paddingBottom: 15, backgroundColor: Colors.brand.white, height: Platform.OS === 'ios' ? 100 : 80, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.brand.lightGray },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    paddingBottom: 15,
+    backgroundColor: Colors.brand.white,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.brand.lightGray,
+  },
   backButton: { padding: 5 },
   headerTitle: { fontSize: 20, fontWeight: '600', color: Colors.brand.darkBlue, fontFamily: 'OpenSans-SemiBold', flex: 1, textAlign: 'center', marginRight: -34 },
   spacer: { width: 34 },

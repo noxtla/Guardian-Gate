@@ -73,10 +73,8 @@ export default function MessagesScreen() {
     }, 1500);
   }, [inputText, isSendButtonActive]);
 
-  const HEADER_HEIGHT = Platform.OS === 'ios' ? 100 : 80;
-
   const renderHeader = () => (
-    <View style={[styles.headerContainer, { height: HEADER_HEIGHT, paddingTop: insets.top }]}>
+    <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}><IconSymbol name="arrow.backward" size={24} color={Colors.brand.darkBlue} /></TouchableOpacity>
       <ThemedText style={styles.headerTitle}>Support Chat</ThemedText>
       <View style={{ width: 34 }} />
@@ -89,7 +87,7 @@ export default function MessagesScreen() {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={HEADER_HEIGHT}
+        keyboardVerticalOffset={90}
       >
         <FlatList
           ref={flatListRef}
@@ -126,7 +124,7 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.brand.lightGray },
   keyboardAvoidingContainer: { flex: 1, marginBottom: 80 },
-  headerContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15, backgroundColor: Colors.brand.white, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.brand.lightGray },
+  headerContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15, backgroundColor: Colors.brand.white, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.brand.lightGray, paddingBottom: 15, },
   backButton: { padding: 5 },
   headerTitle: { fontSize: 20, fontWeight: '600', color: Colors.brand.darkBlue, fontFamily: 'OpenSans-SemiBold' },
   messageListContent: { paddingHorizontal: 15, paddingTop: 10, flexGrow: 1, justifyContent: 'flex-end' },
