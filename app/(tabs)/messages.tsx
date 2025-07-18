@@ -19,6 +19,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 
+// ... (Interface, AVATARS, initialMessages, MessageBubble are unchanged)
 interface Message {
   id: string;
   text: string;
@@ -47,6 +48,7 @@ const MessageBubble = React.memo(({ message }: { message: Message }) => {
     </View>
   );
 });
+
 
 export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
@@ -85,7 +87,8 @@ export default function MessagesScreen() {
     <ThemedView style={styles.container}>
       {renderHeader()}
       <KeyboardAvoidingView
-        style={styles.keyboardAvoidingContainer}
+        // 1. DYNAMICALLY ADJUST THE MARGIN/PADDING
+        style={[styles.keyboardAvoidingContainer, { marginBottom: 80 + insets.bottom }]} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={90}
       >
@@ -97,7 +100,8 @@ export default function MessagesScreen() {
           contentContainerStyle={styles.messageListContent}
           onScrollBeginDrag={Keyboard.dismiss}
         />
-        <View style={[styles.inputAreaContainer, { paddingBottom: insets.bottom === 0 ? 10 : insets.bottom }]}>
+        {/* 2. ENSURE THE INPUT AREA ITSELF RESPECTS THE INSETS */}
+        <View style={[styles.inputAreaContainer, { paddingBottom: 10 }]}>
           <TouchableOpacity style={styles.attachmentButton}><IconSymbol name="paperclip.fill" size={24} color={Colors.brand.gray} /></TouchableOpacity>
           <TextInput
             style={styles.messageInput}
@@ -121,9 +125,11 @@ export default function MessagesScreen() {
   );
 }
 
+// NOTE: The style for `keyboardAvoidingContainer` is now only `flex: 1`. The margin is applied inline.
+// The `paddingBottom` for `inputAreaContainer` is simplified.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.brand.lightGray },
-  keyboardAvoidingContainer: { flex: 1, marginBottom: 80 },
+  keyboardAvoidingContainer: { flex: 1 },
   headerContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15, backgroundColor: Colors.brand.white, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.brand.lightGray, paddingBottom: 15, },
   backButton: { padding: 5 },
   headerTitle: { fontSize: 20, fontWeight: '600', color: Colors.brand.darkBlue, fontFamily: 'OpenSans-SemiBold' },

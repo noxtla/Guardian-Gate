@@ -6,6 +6,7 @@ import { Colors } from '@/constants/Colors';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { StyleSheet, useWindowDimensions, View, TouchableOpacity } from 'react-native';
 import { useEffect } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // 1. IMPORT THE HOOK
 
 // Importaciones de reanimated
 import Animated, {
@@ -18,6 +19,7 @@ import Animated, {
 // CustomTabBar
 function CustomTabBar({ state, descriptors, navigation }: any) {
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets(); // 2. GET THE INSETS
   const NUMBER_OF_TABS = state.routes.length;
   const TAB_ITEM_WIDTH = width / NUMBER_OF_TABS;
 
@@ -41,7 +43,8 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
   });
 
   return (
-    <View style={styles.tabBarContainer}>
+    // 3. APPLY THE INSET TO THE CONTAINER'S POSITION
+    <View style={[styles.tabBarContainer, { bottom: insets.bottom }]}> 
       <Animated.View style={pillAnimatedStyle} />
 
       {state.routes.map((route: any, index: number) => {
@@ -131,7 +134,7 @@ const styles = StyleSheet.create({
   tabBarContainer: {
     flexDirection: 'row',
     position: 'absolute',
-    bottom: 0,
+    // REMOVED: bottom: 0, // This is now handled dynamically inline
     left: 0,
     right: 0,
     height: 80,
