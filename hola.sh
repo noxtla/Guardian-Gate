@@ -1,3 +1,10 @@
+echo "Step 1: Fix the Custom Tab Bar in app/(tabs)/_layout.tsx
+
+I will modify the CustomTabBar component to use paddingBottom instead of positioning with bottom. This will make the background fill the safe area while keeping the interactive elements (the icons) safely above it.
+app/(tabs)/_layout.tsx
+Generated typescript
+
+      
 // app/(tabs)/_layout.tsx
 
 import { Tabs } from 'expo-router';
@@ -6,7 +13,7 @@ import { Colors } from '@/constants/Colors';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { StyleSheet, useWindowDimensions, View, TouchableOpacity } from 'react-native';
 import { useEffect } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context'; // 1. IMPORT THE HOOK
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Importaciones de reanimated
 import Animated, {
@@ -19,7 +26,7 @@ import Animated, {
 // CustomTabBar
 function CustomTabBar({ state, descriptors, navigation }: any) {
   const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets(); // 2. GET THE INSETS
+  const insets = useSafeAreaInsets(); // Get the insets
   const NUMBER_OF_TABS = state.routes.length;
   const TAB_ITEM_WIDTH = width / NUMBER_OF_TABS;
 
@@ -43,7 +50,10 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
   });
 
   return (
-    // 3. APPLY THE INSET TO THE CONTAINER'S POSITION
+    // CORRECTED VIEW:
+    // We apply paddingBottom to extend the background color into the safe area.
+    // The component's content area remains 80px high, and the tab items inside
+    // will be vertically centered within that 80px space.
     <View style={[styles.tabBarContainer, { paddingBottom: insets.bottom }]}>
       <Animated.View style={pillAnimatedStyle} />
 
@@ -134,10 +144,10 @@ const styles = StyleSheet.create({
   tabBarContainer: {
     flexDirection: 'row',
     position: 'absolute',
-    bottom: 0,
+    bottom: 0, // CORRECTED: Restore this to stick the component to the screen bottom.
     left: 0,
     right: 0,
-    height: 80,
+    height: 80, // This is the height of the interactive area. The padding will be added to this.
     backgroundColor: Colors.brand.darkBlue,
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
@@ -161,3 +171,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+    
+
+IGNORE_WHEN_COPYING_START
+Use code with caution. TypeScript
+IGNORE_WHEN_COPYING_END
+Step 2: Ensure Content on All Tabs Respects the Tab Bar
+
+Now that the tab bar correctly occupies the space at the bottom (80px for the content + insets.bottom for the safe area), we must ensure the content within each tab screen has enough bottom padding to not be hidden. The messages.tsx screen already does this correctly, but the Home, Notifications, and Profile screens do not.
+app/(tabs)/index.tsx (Home Screen)
+
+The FlatList on the home screen needs bottom padding so the last row of buttons is fully visible.
+Generated typescript
+
+      
+// app/(tabs)/index.tsx
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { globalStyles } from '@/constants/AppStyles';
+import { Colors } from '@/constants/Colors';
+import { IconSymbol, IconSymbolName }
+
+    "

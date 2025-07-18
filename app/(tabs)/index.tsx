@@ -53,6 +53,7 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     justifyContent: 'center',
+    paddingBottom: 100,
   },
   menuButton: {
     backgroundColor: Colors.brand.white,
