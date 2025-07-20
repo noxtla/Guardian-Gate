@@ -1,41 +1,45 @@
 // app/year.tsx
-
-import { ThemedText } from '@/components/ThemedText';
-import { Colors } from '@/constants/Colors';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
-  StyleSheet,
+  View,
+  Text,
+  TextInput,
   TouchableOpacity,
   SafeAreaView,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
-  View,
-  Text,
-  // Alert, // Eliminado para simplificar
-  // ActivityIndicator, // Eliminado para simplificar
 } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { globalStyles } from '@/constants/AppStyles';
-import { IconSymbol } from '@/components/ui/IconSymbol'; // Asegúrate de que esta importación esté presente
-import { router } from 'expo-router';
-// import { AuthService } from '@/services/authService'; // Eliminado para simplificar
-// import { useAuth } from '@/context/AuthContext'; // Eliminado para simplificar
+import { Colors } from '@/constants/Colors';
+import { ThemedText } from '@/components/ThemedText';
+import { IconSymbol } from '@/components/ui/IconSymbol';
 
 export default function YearScreen() {
-  const [year, setYear] = useState('2000'); // --- CAMBIO CLAVE ---: Valor por defecto
-  // const [isLoading, setIsLoading] = useState(false); // Eliminado para simplificar
-  // --- CAMBIO CLAVE ---: isYearValid siempre true
-  const isYearValid = year.length === 4;
+  // 1. Recibe los datos acumulados de las pantallas anteriores.
+  const { phone, month, day } = useLocalSearchParams<{ phone: string; month: string; day: string }>();
+  
+  // 2. Estado local para gestionar la entrada del año.
+  const [year, setYear] = useState('');
+  const isYearValid = year.length === 4 && !isNaN(parseInt(year));
 
-  // const { user, login } = useAuth(); // Eliminado para simplificar
-
-  // --- CAMBIO CLAVE ---: Función simplificada para navegación directa
+  // 3. Lógica de navegación simple que pasa todos los datos a la siguiente pantalla.
   const handleContinue = () => {
-    if (isYearValid) { // Todavía se respeta la longitud mínima visualmente
-      router.push('/biometric');
-    }
+    if (!isYearValid) return;
+    Keyboard.dismiss();
+
+    // Navega a la pantalla final de biométricos, pasando toda la información recolectada.
+    router.push({
+      pathname: '/biometric',
+      params: {
+        phone,
+        month,
+        day,
+        year,
+      },
+    });
   };
 
   return (
@@ -47,15 +51,16 @@ export default function YearScreen() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={globalStyles.authScreenContentContainer}>
+            {/* La barra de progreso ahora es el paso 3 de 4. */}
             <View style={globalStyles.authProgressContainer}>
-              <Text style={globalStyles.authProgressText}>4/4</Text>
+              <Text style={globalStyles.authProgressText}>3/4</Text>
               <View style={globalStyles.authProgressBarBackground}>
-                <View style={[globalStyles.authProgressBarFill, { width: '100%' }]} />
+                <View style={[globalStyles.authProgressBarFill, { width: '75%' }]} />
               </View>
             </View>
 
-            {/* CAMBIO AQUÍ: Usamos IconSymbol con el nombre "calendar" */}
-            <IconSymbol name="calendar" size={150} color={Colors.brand.lightBlue} />
+            <IconSymbol name="calendar" size={120} color={Colors.brand.lightBlue} />
+            <ThemedText style={globalStyles.authTitle}>¿En qué año nació?</ThemedText>
 
             <TextInput
               style={globalStyles.textInput}
@@ -65,27 +70,19 @@ export default function YearScreen() {
               value={year}
               onChangeText={setYear}
               maxLength={4}
-              // editable={!isLoading} // Eliminado para simplificar
+              autoFocus={true}
             />
 
             <TouchableOpacity
-              style={[
-                globalStyles.primaryButton,
-                // --- CAMBIO CLAVE ---: disabled siempre false
-                !isYearValid && globalStyles.disabledButton,
-              ]}
+              style={[globalStyles.primaryButton, !isYearValid && globalStyles.disabledButton]}
               disabled={!isYearValid}
-              onPress={handleContinue} // Llama a la función simplificada
+              onPress={handleContinue}
             >
-              {/* {isLoading ? ( // Eliminado para simplificar
-                <ActivityIndicator color={Colors.brand.white} />
-              ) : ( */}
-                <ThemedText style={globalStyles.primaryButtonText}>Confirm</ThemedText>
-              {/* )} */}
+              <ThemedText style={globalStyles.primaryButtonText}>Continuar</ThemedText>
             </TouchableOpacity>
 
             <ThemedText style={globalStyles.infoText}>
-              Please enter your four-digit year of birth to complete verification.
+              Este es el penúltimo paso para confirmar su identidad.
             </ThemedText>
           </View>
         </TouchableWithoutFeedback>
@@ -93,9 +90,3 @@ export default function YearScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        justifyContent: 'space-between',
-    },
-});

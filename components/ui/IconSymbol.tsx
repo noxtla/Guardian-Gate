@@ -18,6 +18,7 @@ type IconMapping = Record<string, ComponentProps<typeof MaterialIcons>['name']>;
 const MAPPING: IconMapping = {
   // CAMBIO CLAVE AQUÍ: 'shield.fill' ahora mapea a 'privacy-tip'
   'shield.fill': 'privacy-tip', // Icon for login/security screens
+  'faceid': 'tag-faces',
 
   // Tab Bar Icons
   'house.fill': 'home',

@@ -10,9 +10,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-rekognition": "^3.848.0",
+    "@aws-sdk/client-s3": "^3.848.0",
     "@google-cloud/functions-framework": "^4.0.0",
     "@google-cloud/secret-manager": "^6.1.0",
     "@supabase/supabase-js": "^2.52.0",
-    "dotenv": "^17.2.0"
+    "dotenv": "^17.2.0",
+    "jsonwebtoken": "^9.0.2"
   }
 }
