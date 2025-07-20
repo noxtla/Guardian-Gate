@@ -9,6 +9,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   ActivityIndicator,
+  Alert, // <-- IMPORTANTE: Necesitamos Alert para los errores
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -17,19 +18,20 @@ import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import PhoneInput from '@/components/PhoneInput';
 import { Colors } from '@/constants/Colors';
 import { globalStyles } from '@/constants/AppStyles';
-// import { AuthService } from '@/services/authService';
-import { useAuth } from '@/context/AuthContext'; // Import useAuth
+import { AuthService } from '@/services/authService'; // <-- IMPORTANTE: Descomentar o añadir esta línea
+import { useAuth } from '@/context/AuthContext'; 
 
 export default function GuardianGateScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isPhoneValid, setIsPhoneValid] = useState(false);
   const [isInputVisible, setIsInputVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // For phone number 'Continue' button
-  const [isLoadingFaceId, setIsLoadingFaceId] = useState(false); // For FaceId button
+  const [isLoading, setIsLoading] = useState(false); 
+  const [isLoadingFaceId, setIsLoadingFaceId] = useState(false); 
 
-  const { login } = useAuth(); // Destructure login from useAuth
+  const { login } = useAuth(); 
 
   const handlePhoneNumberChange = useCallback((number: string) => {
+    // Asumimos que el PhoneInput devuelve el número en formato internacional E.164
     setPhoneNumber(number);
   }, []);
 
@@ -37,33 +39,53 @@ export default function GuardianGateScreen() {
     setIsPhoneValid(isValid);
   }, []);
 
+  // --- LÓGICA MODIFICADA ---
   const handleContinue = async () => {
+    // Primer click: solo muestra el campo de texto.
     if (!isInputVisible) {
       setIsInputVisible(true);
       return;
     }
 
+    // Segundo click (con el campo visible): inicia la verificación.
     if (!isPhoneValid || isLoading) return;
 
+    Keyboard.dismiss();
     setIsLoading(true);
+    
     try {
-      // await AuthService.sendOtp(phoneNumber);
-      console.log('Simulating sending OTP to:', phoneNumber);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      router.push('/otc');
-    } catch (error) {
-      // Alert.alert('Error', 'Could not send the code. Please try again.');
-      console.error(error);
+      // 1. LLAMADA AL BACKEND REAL
+      const userFound = await AuthService.checkPhoneNumber(phoneNumber);
+
+      // 2. MANEJO DE LA RESPUESTA
+      if (userFound) {
+        // El usuario existe y está activo. Ahora podemos proceder.
+        // En un futuro, aquí llamaríamos a AuthService.sendOtp(phoneNumber)
+        console.log('User found. Simulating sending OTP to:', phoneNumber);
+        // Por ahora, navegamos a la pantalla de OTC como lo tenías.
+        // Pasamos el número como parámetro para usarlo en la siguiente pantalla.
+        router.push({ pathname: '/otc', params: { phone: phoneNumber } });
+      } else {
+        // El usuario no existe o no está activo. Mostramos un error claro.
+        Alert.alert(
+          'Acceso Denegado',
+          'El número de teléfono no está registrado o no se encuentra activo. Por favor, contacte a un administrador.'
+        );
+      }
+    } catch (error: any) {
+      // Si la llamada al backend falla (red, error 500), mostramos el error.
+      Alert.alert('Error', error.message || 'No se pudo conectar con el servidor.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleFaceIdLogin = async () => {
+    // Esta lógica de Face ID se mantiene igual por ahora.
     console.log('Attempting FaceId login...');
     setIsLoadingFaceId(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       await login('dummy-faceid-token', 'faceid-user-123', true);
       router.replace('/(tabs)');
     } catch (error) {
@@ -73,6 +95,7 @@ export default function GuardianGateScreen() {
     }
   };
 
+  // El resto de tu componente (el return) es perfecto y no necesita cambios.
   return (
     <SafeAreaView style={globalStyles.darkScreenContainer} edges={['bottom']}>
       <KeyboardAvoidingView
@@ -113,7 +136,6 @@ export default function GuardianGateScreen() {
                     </ThemedText>
                   </TouchableOpacity>
 
-                  {/* Button for FaceId login */}
                   <TouchableOpacity
                     style={[
                       globalStyles.primaryButton,
