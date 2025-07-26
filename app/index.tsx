@@ -9,6 +9,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   ActivityIndicator,
+  Alert, // <-- IMPORTANTE: Necesitamos Alert para los errores
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -17,19 +18,20 @@ import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import PhoneInput from '@/components/PhoneInput';
 import { Colors } from '@/constants/Colors';
 import { globalStyles } from '@/constants/AppStyles';
-// import { AuthService } from '@/services/authService';
-import { useAuth } from '@/context/AuthContext'; // Import useAuth
+import { AuthService } from '@/services/authService'; // <-- IMPORTANTE: Descomentar o añadir esta línea
+import { useAuth } from '@/context/AuthContext'; 
 
 export default function GuardianGateScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isPhoneValid, setIsPhoneValid] = useState(false);
   const [isInputVisible, setIsInputVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // For phone number 'Continue' button
-  const [isLoadingFaceId, setIsLoadingFaceId] = useState(false); // NEW: For FaceId button
+  const [isLoading, setIsLoading] = useState(false); 
+  const [isLoadingFaceId, setIsLoadingFaceId] = useState(false); 
 
-  const { login } = useAuth(); // Destructure login from useAuth
+  const { login } = useAuth(); 
 
   const handlePhoneNumberChange = useCallback((number: string) => {
+    // Asumimos que el PhoneInput devuelve el número en formato internacional E.164
     setPhoneNumber(number);
   }, []);
 
@@ -37,52 +39,63 @@ export default function GuardianGateScreen() {
     setIsPhoneValid(isValid);
   }, []);
 
+  // --- LÓGICA MODIFICADA ---
   const handleContinue = async () => {
+    // Primer click: solo muestra el campo de texto.
     if (!isInputVisible) {
       setIsInputVisible(true);
       return;
     }
 
+    // Segundo click (con el campo visible): inicia la verificación.
     if (!isPhoneValid || isLoading) return;
 
+    Keyboard.dismiss();
     setIsLoading(true);
+    
     try {
-      // await AuthService.sendOtp(phoneNumber);
-      console.log('Simulando envío de OTP al número:', phoneNumber);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      router.push('/otc');
-    } catch (error) {
-      // Alert.alert('Error', 'Could not send the code. Please try again.');
-      console.error(error);
+      // 1. LLAMADA AL BACKEND REAL
+      const userFound = await AuthService.checkPhoneNumber(phoneNumber);
+
+      // 2. MANEJO DE LA RESPUESTA
+      if (userFound) {
+        // El usuario existe y está activo. Ahora podemos proceder.
+        // En un futuro, aquí llamaríamos a AuthService.sendOtp(phoneNumber)
+        console.log('User found. Simulating sending OTP to:', phoneNumber);
+        // Por ahora, navegamos a la pantalla de OTC como lo tenías.
+        // Pasamos el número como parámetro para usarlo en la siguiente pantalla.
+        router.push({ pathname: '/otc', params: { phone: phoneNumber } });
+      } else {
+        // El usuario no existe o no está activo. Mostramos un error claro.
+        Alert.alert(
+          'Acceso Denegado',
+          'El número de teléfono no está registrado o no se encuentra activo. Por favor, contacte a un administrador.'
+        );
+      }
+    } catch (error: any) {
+      // Si la llamada al backend falla (red, error 500), mostramos el error.
+      Alert.alert('Error', error.message || 'No se pudo conectar con el servidor.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // NEW: Handler for FaceId login
   const handleFaceIdLogin = async () => {
+    // Esta lógica de Face ID se mantiene igual por ahora.
     console.log('Attempting FaceId login...');
     setIsLoadingFaceId(true);
     try {
-      // Simulate successful login via FaceId by calling login from AuthContext
-      // Provide dummy token, userId, and set hasBiometricsEnabled to true
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       await login('dummy-faceid-token', 'faceid-user-123', true);
-      console.log('AuthContext login called, isAuthenticated should be true.');
-      // Explicitly navigate after login. This ensures navigation regardless of
-      // how _layout.tsx reacts to the isAuthenticated state change.
       router.replace('/(tabs)');
-      console.log('Navigated to /(tabs)');
     } catch (error) {
       console.error('Error during FaceId login:', error);
-      // Optionally show an alert to the user
-      // Alert.alert('Login Failed', 'Could not log in with FaceId. Please try again.');
     } finally {
       setIsLoadingFaceId(false);
-      console.log('FaceId login process finished.');
     }
   };
 
+  // El resto de tu componente (el return) es perfecto y no necesita cambios.
   return (
     <SafeAreaView style={globalStyles.darkScreenContainer} edges={['bottom']}>
       <KeyboardAvoidingView
@@ -114,32 +127,33 @@ export default function GuardianGateScreen() {
                   </TouchableOpacity>
                 </>
               ) : (
-                <TouchableOpacity
-                  style={globalStyles.primaryButton}
-                  onPress={handleContinue}>
-                  <ThemedText style={globalStyles.primaryButtonText}>
-                    Enter your phone number
-                  </ThemedText>
-                </TouchableOpacity>
-              )}
+                <>
+                  <TouchableOpacity
+                    style={globalStyles.primaryButton}
+                    onPress={handleContinue}>
+                    <ThemedText style={globalStyles.primaryButtonText}>
+                      Enter your phone number
+                    </ThemedText>
+                  </TouchableOpacity>
 
-              {/* MODIFIED: Button for FaceId login with loading state and explicit navigation */}
-              <TouchableOpacity
-                style={[
-                  globalStyles.primaryButton,
-                  isLoadingFaceId && globalStyles.disabledButton, // Disable while loading
-                ]}
-                disabled={isLoadingFaceId} // Disable while loading
-                onPress={handleFaceIdLogin} // Use the new handler
-              >
-                {isLoadingFaceId ? ( // Show activity indicator if loading
-                  <ActivityIndicator color={Colors.brand.white} />
-                ) : (
-                  <ThemedText style={globalStyles.primaryButtonText}>
-                    Enter with FaceId
-                  </ThemedText>
-                )}
-              </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      globalStyles.primaryButton,
+                      isLoadingFaceId && globalStyles.disabledButton,
+                    ]}
+                    disabled={isLoadingFaceId}
+                    onPress={handleFaceIdLogin}
+                  >
+                    {isLoadingFaceId ? (
+                      <ActivityIndicator color={Colors.brand.white} />
+                    ) : (
+                      <ThemedText style={globalStyles.primaryButtonText}>
+                        Enter with FaceId
+                      </ThemedText>
+                    )}
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
 
             <ThemedText style={globalStyles.infoText}>
@@ -165,6 +179,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 150,
     justifyContent: 'center',
-    gap: 20, // This gap will now apply between all children
+    gap: 20,
   },
 });

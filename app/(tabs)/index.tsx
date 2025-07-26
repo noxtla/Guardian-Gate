@@ -1,154 +1,78 @@
-// app/index.tsx
-
-import React, { useState, useCallback } from 'react';
-import {
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+// app/(tabs)/index.tsx
 import { ThemedText } from '@/components/ThemedText';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
-import PhoneInput from '@/components/PhoneInput'; // Asegúrate de que este componente acepte 10 dígitos
-import { Colors } from '@/constants/Colors';
+import { ThemedView } from '@/components/ThemedView';
 import { globalStyles } from '@/constants/AppStyles';
-import { apiClient } from '@/services/apiClient';
+import { Colors } from '@/constants/Colors';
+import { IconSymbol, IconSymbolName } from '@/components/ui/IconSymbol';
+import React from 'react';
+import { StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 
-export default function GuardianGateScreen() {
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [isPhoneValid, setIsPhoneValid] = useState(false);
-  const [isInputVisible, setIsInputVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+interface MenuItemData {
+  key: string;
+  title: string;
+  icon: IconSymbolName;
+}
 
-  // El usuario solo escribe el número, ej: "5551234567"
-  const handlePhoneNumberChange = useCallback((number: string) => {
-    setPhoneNumber(number);
-  }, []);
+const menuItems: MenuItemData[] = [
+  { key: '1', title: 'Attendance', icon: 'person.badge.clock.fill' },
+  { key: '2', title: 'Vehicles', icon: 'car.fill' },
+];
 
-  const handleValidationChange = useCallback((isValid: boolean) => {
-    // La validación del componente PhoneInput ahora solo necesita verificar
-    // que sean 10 dígitos numéricos.
-    setIsPhoneValid(isValid);
-  }, []);
+const MenuItem = ({ item }: { item: MenuItemData }) => (
+  <TouchableOpacity style={styles.menuButton} activeOpacity={0.7}>
+    <IconSymbol name={item.icon} size={48} color={Colors.brand.darkBlue} />
+    <ThemedText style={styles.menuButtonText}>{item.title}</ThemedText>
+  </TouchableOpacity>
+);
 
-  // --- LÓGICA DE LA API ACTUALIZADA ---
-  const handleContinue = async () => {
-    if (!isInputVisible) {
-      setIsInputVisible(true);
-      return;
-    }
-
-    if (!isPhoneValid || isLoading) return;
-
-    setIsLoading(true);
-
-    // --- CAMBIO CLAVE: Normalización del número de teléfono ---
-    // 1. Limpiamos cualquier caracter no numérico (paréntesis, guiones, etc.).
-    const cleanedNumber = phoneNumber.replace(/\D/g, '');
-    
-    // 2. Verificamos si tiene 10 dígitos (estándar de EE.UU. sin código de país).
-    if (cleanedNumber.length !== 10) {
-      Alert.alert('Número Inválido', 'Por favor, introduce un número de teléfono válido de 10 dígitos.');
-      setIsLoading(false);
-      return;
-    }
-
-    // 3. Creamos el número en formato E.164 añadiendo el prefijo de EE.UU.
-    const fullPhoneNumber = `+1${cleanedNumber}`;
-    // --------------------------------------------------------
-
-    try {
-      const response = await apiClient<{ isValid: boolean }>('', {
-        method: 'POST',
-        // Enviamos el número ya formateado al backend
-        body: { phoneNumber: fullPhoneNumber }, 
-      });
-
-      if (response.isValid) {
-        Alert.alert('Éxito', 'Número de teléfono validado correctamente.');
-        router.push('/otc');
-      } else {
-        Alert.alert('Número no reconocido', 'El número de teléfono introducido no está registrado.');
-      }
-    } catch (error: any) {
-      console.error('Error al validar el número de teléfono:', error);
-      Alert.alert('Error', `No se pudo verificar el número. Por favor, inténtalo de nuevo.`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+export default function HomeScreen() {
   return (
-    <SafeAreaView style={globalStyles.darkScreenContainer} edges={['bottom']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flexContainer}>
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={[globalStyles.contentContainer, styles.containerPadding]}>
-            <FontAwesome6 name="user-shield" size={150} color={Colors.brand.lightBlue} />
-
-            <View style={styles.inputContainer}>
-              {isInputVisible ? (
-                <>
-                  <PhoneInput
-                    onPhoneNumberChange={handlePhoneNumberChange}
-                    onValidationChange={handleValidationChange}
-                  />
-                  <TouchableOpacity
-                    style={[
-                      globalStyles.primaryButton,
-                      (!isPhoneValid || isLoading) && globalStyles.disabledButton,
-                    ]}
-                    disabled={!isPhoneValid || isLoading}
-                    onPress={handleContinue}>
-                    {isLoading ? (
-                      <ActivityIndicator color={Colors.brand.white} />
-                    ) : (
-                      <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>
-                    )}
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <TouchableOpacity
-                  style={globalStyles.primaryButton}
-                  onPress={handleContinue}>
-                  <ThemedText style={globalStyles.primaryButtonText}>
-                    Enter your phone number
-                  </ThemedText>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <ThemedText style={globalStyles.infoText}>
-              {'For currently active employees only.\nAny fraudulent activity will be penalized.'}
-            </ThemedText>
-          </View>
-        </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    <ThemedView style={[globalStyles.lightScreenContainer, styles.container]}>
+      <FlatList
+        data={menuItems}
+        renderItem={({ item }) => <MenuItem item={item} />}
+        keyExtractor={item => item.key}
+        numColumns={2}
+        contentContainerStyle={styles.menuContainer}
+        scrollEnabled={false}
+      />
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  flexContainer: {
+  container: {
     flex: 1,
+    paddingHorizontal: 10,
+    paddingTop: 20,
+    backgroundColor: Colors.brand.lightGray,
   },
-  containerPadding: {
-    justifyContent: 'space-between',
-    paddingBottom: 20,
-  },
-  inputContainer: {
-    width: '100%',
-    alignItems: 'center',
-    minHeight: 150,
+  menuContainer: {
     justifyContent: 'center',
-    gap: 20,
+    paddingBottom: 100,
+  },
+  menuButton: {
+    backgroundColor: Colors.brand.white,
+    flex: 1,
+    margin: 10,
+    height: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    padding: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  menuButtonText: {
+    color: Colors.brand.darkBlue,
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
   },
 });

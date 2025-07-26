@@ -2,16 +2,31 @@
 
 import { ThemedText } from '@/components/ThemedText';
 import { Colors } from '@/constants/Colors';
-import React, { useState, useMemo } from 'react';
-import { StyleSheet, TouchableOpacity, SafeAreaView, View, Text } from 'react-native';
+import React, { useState, useMemo, useRef } from 'react';
+import {
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+  View,
+  Text,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  Keyboard,
+  Platform,
+} from 'react-native';
+import Animated from 'react-native-reanimated';
 import { globalStyles } from '@/constants/AppStyles';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAnimatedShake } from '@/hooks/useAnimatedShake';
+import { AuthService } from '@/services/authService';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
-// --- Datos y Funciones Auxiliares (sin cambios) ---
-const MONTHS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-];
+// --- Constantes y Helpers ---
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MAX_ATTEMPTS = 3;
+
 const isLeapYear = (year: number): boolean => ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0);
 const getDaysInMonth = (monthIndex: number, year: number): number => {
   if (monthIndex === 1) return isLeapYear(year) ? 29 : 28;
@@ -19,144 +34,191 @@ const getDaysInMonth = (monthIndex: number, year: number): number => {
   return 31;
 };
 
+// --- Componente Principal ---
 export default function DobScreen() {
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(0); // --- CAMBIO CLAVE ---: Valor por defecto
-  const [selectedDay, setSelectedDay] = useState<number | null>(1); // --- CAMBIO CLAVE ---: Valor por defecto
+  const { phone } = useLocalSearchParams<{ phone: string }>();
+  const [year, setYear] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const { animatedStyle: yearShake, triggerShake: triggerYearShake } = useAnimatedShake();
+  const { animatedStyle: monthShake, triggerShake: triggerMonthShake } = useAnimatedShake();
+  const { animatedStyle: dayShake, triggerShake: triggerDayShake } = useAnimatedShake();
 
-  const currentYear = new Date().getFullYear();
-  const daysInMonth = useMemo(
-    () => selectedMonth !== null ? getDaysInMonth(selectedMonth, currentYear) : 31,
-    [selectedMonth, currentYear]
+  const yearInputRef = useRef<TextInput>(null);
+
+  const isFormComplete = selectedMonth !== null && selectedDay !== null && year.length === 4;
+  let isDateValid = false;
+  let isContinueDisabled = true;
+
+  if (isFormComplete) {
+    const today = new Date();
+    const dob = new Date(parseInt(year), selectedMonth!, selectedDay!);
+    const minAgeDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+    const maxAgeDate = new Date(today.getFullYear() - 90, today.getMonth(), today.getDate());
+    isDateValid = 
+      dob.getFullYear() === parseInt(year) &&
+      dob <= minAgeDate &&
+      dob >= maxAgeDate;
+  }
+  isContinueDisabled = !isFormComplete || !isDateValid || isLoading;
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const checkLockStatus = async () => {
+        const lockTimestamp = await AsyncStorage.getItem('@auth_lock_timestamp');
+        if (lockTimestamp && new Date().getTime() < parseInt(lockTimestamp, 10)) {
+          Alert.alert( 'Acceso Bloqueado', 'Has superado el número de intentos. El acceso desde este dispositivo está bloqueado temporalmente.', [{ text: 'Entendido', onPress: () => router.replace('/') }] );
+        }
+      };
+      checkLockStatus();
+    }, [])
   );
-  const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  // --- CAMBIO CLAVE ---: isFormValid siempre true
-  const isFormValid = true; // Para desarrollo, siempre válido
+  const handleVerification = async () => {
+    if (isContinueDisabled) return;
+    Keyboard.dismiss(); 
+    setIsLoading(true);
+    try {
+      const { token, userId } = await AuthService.verifyIdentity(phone!, selectedDay!, selectedMonth! + 1, parseInt(year, 10));
+      await AsyncStorage.removeItem('@auth_fail_attempts');
+      router.push({
+        pathname: '/biometric',
+        params: { phone, month: selectedMonth! + 1, day: selectedDay!, year, userId, token },
+      });
+    } catch (error) {
+      handleFailedAttempt();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFailedAttempt = async () => {
+    const attemptsStr = await AsyncStorage.getItem('@auth_fail_attempts');
+    const newAttempts = (attemptsStr ? parseInt(attemptsStr, 10) : 0) + 1;
+    triggerYearShake(); 
+    triggerMonthShake(); 
+    triggerDayShake();
+    if (newAttempts >= MAX_ATTEMPTS) {
+      if (!__DEV__) {
+        const lockUntil = new Date().getTime() + 24 * 60 * 60 * 1000;
+        await AsyncStorage.setItem('@auth_lock_timestamp', lockUntil.toString());
+      } else { 
+        console.log('[DEV MODE] Bloqueo de dispositivo OMITIDO.'); 
+      }
+      await AsyncStorage.removeItem('@auth_fail_attempts');
+      Alert.alert('Demasiados Intentos Fallidos', 'Por su seguridad, el acceso desde este dispositivo ha sido bloqueado temporalmente.', [{ text: 'Entendido', onPress: () => { if (!__DEV__) router.replace('/'); } }]);
+    } else {
+      await AsyncStorage.setItem('@auth_fail_attempts', newAttempts.toString());
+      Alert.alert('Datos Incorrectos', `La fecha de nacimiento no coincide con nuestros registros. Le quedan ${MAX_ATTEMPTS - newAttempts} intentos.`);
+      setSelectedDay(null); 
+      setSelectedMonth(null); 
+      setYear('');
+      yearInputRef.current?.focus();
+    }
+  };
+
+  const handleYearChange = (text: string) => {
+    setYear(text);
+    setSelectedDay(null);
+  };
+
+  const handleMonthSelect = (monthIndex: number) => {
+    setSelectedMonth(monthIndex);
+    setSelectedDay(null);
+  };
+
+  const daysInSelectedMonth = useMemo(() => {
+    if (year.length !== 4 || selectedMonth === null) {
+      return 0;
+    }
+    return getDaysInMonth(selectedMonth, parseInt(year));
+  }, [selectedMonth, year]);
+  const daysArray = Array.from({ length: daysInSelectedMonth }, (_, i) => i + 1);
 
   return (
     <SafeAreaView style={globalStyles.darkScreenContainer}>
-      <View style={styles.container}>
-        <View>
-          <View style={styles.progressContainer}>
-            <Text style={styles.progressText}>3/4</Text>
-            <View style={styles.progressBarBackground}>
-              <View style={[styles.progressBarFill, { width: '75%' }]} />
-            </View>
-          </View>
-
-          <ThemedText style={styles.sectionTitle}>Month</ThemedText>
-          <View style={styles.gridContainer}>
-            {MONTHS.map((month, index) => (
-              <TouchableOpacity
-                key={month}
-                style={[
-                  styles.gridButton, { minWidth: '22%' },
-                  selectedMonth === index ? styles.selectedButton : styles.unselectedButton,
-                ]}
-                onPress={() => setSelectedMonth(index)}
-              >
-                <Text style={selectedMonth === index ? styles.selectedButtonText : styles.unselectedButtonText}>
-                  {month}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <ThemedText style={styles.sectionTitle}>Day</ThemedText>
-          <View style={styles.gridContainer}>
-            {daysArray.map((day) => (
-              <TouchableOpacity
-                key={day}
-                style={[
-                  styles.gridButton, { minWidth: '12.5%' },
-                  selectedDay === day ? styles.selectedButton : styles.unselectedButton,
-                ]}
-                onPress={() => setSelectedDay(day)}
-              >
-                <Text style={selectedDay === day ? styles.selectedButtonText : styles.unselectedButtonText}>
-                  {day}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+      <View style={styles.staticHeader}>
+        <View style={globalStyles.authProgressContainer}>
+          <Text style={globalStyles.authProgressText}>2/3</Text>
+          <View style={globalStyles.authProgressBarBackground}><View style={[globalStyles.authProgressBarFill, { width: '66%' }]} /></View>
         </View>
+        <ThemedText style={globalStyles.authTitle}>¿Cuál es su fecha de nacimiento?</ThemedText>
+      </View>
+      
+      <KeyboardAwareScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.scrollContainer}
+        enableOnAndroid={true}
+        extraHeight={120}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Animated.View style={yearShake}>
+          <ThemedText style={styles.sectionTitle}>Año</ThemedText>
+          <TextInput
+            ref={yearInputRef}
+            style={[globalStyles.textInput, styles.yearTextInput]}
+            placeholder="YYYY"
+            placeholderTextColor={Colors.brand.gray}
+            keyboardType="number-pad"
+            value={year}
+            onChangeText={handleYearChange}
+            maxLength={4}
+            returnKeyType="done"
+          />
+        </Animated.View>
+        
+        {year.length === 4 && (
+          <Animated.View style={monthShake}>
+            <ThemedText style={styles.sectionTitle}>Mes</ThemedText>
+            <View style={styles.gridContainer}>
+              {MONTHS.map((month, index) => (
+                <TouchableOpacity key={month} style={[styles.gridButton, { minWidth: '22%' }, selectedMonth === index && styles.selectedButton]} onPress={() => handleMonthSelect(index)}>
+                  <Text style={[styles.unselectedButtonText, selectedMonth === index && styles.selectedButtonText]}>{month}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Animated.View>
+        )}
 
+        {selectedMonth !== null && (
+          <Animated.View style={dayShake}>
+            <ThemedText style={styles.sectionTitle}>Día</ThemedText>
+            <View style={styles.gridContainer}>
+              {daysArray.map((day) => (
+                <TouchableOpacity key={day} style={[styles.gridButton, { minWidth: '12.5%' }, selectedDay === day && styles.selectedButton]} onPress={() => setSelectedDay(day)}>
+                  <Text style={[styles.unselectedButtonText, selectedDay === day && styles.selectedButtonText]}>{day}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Animated.View>
+        )}
+      
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[globalStyles.primaryButton /* --- CAMBIO CLAVE ---: No disabled */]}
-            // disabled={!isFormValid} // Eliminado
-            onPress={() => router.push('/year')}
+            style={[globalStyles.primaryButton, isContinueDisabled && globalStyles.disabledButton]}
+            disabled={isContinueDisabled}
+            onPress={handleVerification}
           >
-            <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>
+            {isLoading ? <ActivityIndicator color={Colors.brand.white} /> : <ThemedText style={globalStyles.primaryButtonText}>Verificar</ThemedText>}
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
 
+// --- Estilos ---
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  progressContainer: {
-    marginBottom: 24,
-  },
-  progressText: {
-    alignSelf: 'flex-end',
-    color: Colors.brand.gray,
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  progressBarBackground: {
-    height: 8,
-    width: '100%',
-    backgroundColor: Colors.brand.darkGray,
-    borderRadius: 4,
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: Colors.brand.lightBlue,
-    borderRadius: 4,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.brand.white,
-    marginBottom: 16,
-    marginTop: 16,
-  },
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  gridButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    marginBottom: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  unselectedButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  unselectedButtonText: {
-    color: Colors.brand.white,
-    fontWeight: '500',
-  },
-  selectedButton: {
-    backgroundColor: Colors.brand.lightBlue,
-  },
-  selectedButtonText: {
-    color: Colors.brand.white,
-    fontWeight: 'bold',
-  },
-  footer: {
-    marginTop: 40,
-    paddingBottom: 20,
-    width: '100%',
-  },
+  staticHeader: { paddingHorizontal: 20, paddingTop: 10 },
+  scrollContainer: { flexGrow: 1, paddingHorizontal: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: Colors.brand.white, marginBottom: 16, marginTop: 24 },
+  yearTextInput: { fontSize: 28, paddingVertical: 20, letterSpacing: 8, fontWeight: 'bold' },
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', gap: 10 },
+  gridButton: { paddingVertical: 12, paddingHorizontal: 10, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexGrow: 1, backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+  unselectedButtonText: { color: Colors.brand.white, fontWeight: '500' },
+  selectedButton: { backgroundColor: Colors.brand.lightBlue },
+  selectedButtonText: { color: Colors.brand.white, fontWeight: 'bold' },
+  footer: { paddingTop: 40, paddingBottom: 20, width: '100%' },
 });

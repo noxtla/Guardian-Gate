@@ -18,6 +18,7 @@ type IconMapping = Record<string, ComponentProps<typeof MaterialIcons>['name']>;
 const MAPPING: IconMapping = {
   // CAMBIO CLAVE AQUÍ: 'shield.fill' ahora mapea a 'privacy-tip'
   'shield.fill': 'privacy-tip', // Icon for login/security screens
+  'faceid': 'tag-faces',
 
   // Tab Bar Icons
   'house.fill': 'home',
@@ -25,8 +26,8 @@ const MAPPING: IconMapping = {
   'bell.fill': 'notifications',
   'person.fill': 'person',
 
-  // Header Icon
-  'camera.fill': 'photo-camera',
+  // --- REMOVED: The camera icon mapping is no longer needed. ---
+  // 'camera.fill': 'camera-alt',
 
   // Home Screen Grid Icons
   'person.badge.clock.fill': 'badge', // Attendance
