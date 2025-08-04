@@ -1,8 +1,9 @@
 // app/biometric.tsx
-import React, { useState } from 'react';
-import { Alert, View, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Button } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
-import { CameraView, useCameraPermissions } from 'expo-camera'; // <-- CAMBIO: Importaciones modernas
+
+import React, { useState, useRef, useCallback } from 'react';
+import { Alert, View, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Button, Text } from 'react-native';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as FileSystem from 'expo-file-system';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -16,29 +17,53 @@ export default function BiometricScreen() {
     const { phone, month, day, year } = useLocalSearchParams<{ phone: string; month: string; day: string; year: string }>();
     const { login } = useAuth();
     
-    // CAMBIO: Se usa el hook para gestionar permisos. Es más simple y declarativo.
     const [permission, requestPermission] = useCameraPermissions();
-    const [capturedImage, setCapturedImage] = React.useState<string | null>(null);
-    const [isLoading, setIsLoading] = React.useState(false);
+    const [capturedImage, setCapturedImage] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [countdown, setCountdown] = useState<number | null>(null);
     
-    // CAMBIO: La ref ahora apunta al tipo 'CameraView'
-    const cameraRef = React.useRef<CameraView | null>(null);
+    const cameraRef = useRef<CameraView | null>(null);
 
-    const takePicture = async () => {
-        if (cameraRef.current && !isLoading) {
-            setIsLoading(true);
-            try {
-                // Tomamos la foto con calidad media para que no sea muy pesada
-                const photo = await cameraRef.current.takePictureAsync({ quality: 0.5 });
-                setCapturedImage(photo.uri);
-            } catch (error) {
-                console.error("Failed to take picture:", error);
-                Alert.alert("Error", "No se pudo capturar la foto.");
-            } finally {
-                setIsLoading(false);
+    useFocusEffect(
+        useCallback(() => {
+            // [CORRECCIÓN] Se usa ReturnType<typeof setInterval> para que el tipo sea universal
+            // y compatible con el 'number' que devuelve en React Native.
+            let timer: ReturnType<typeof setInterval> | undefined;
+
+            if (permission?.granted && !capturedImage) {
+                let currentCount = 3;
+                setCountdown(currentCount);
+
+                timer = setInterval(() => {
+                    currentCount -= 1;
+                    setCountdown(currentCount);
+
+                    if (currentCount === 0) {
+                        clearInterval(timer);
+                        setCountdown(null);
+                        
+                        if (cameraRef.current) {
+                            cameraRef.current.takePictureAsync({ quality: 0.5 })
+                                .then(photo => {
+                                    setCapturedImage(photo.uri);
+                                })
+                                .catch(error => {
+                                    console.error("Fallo al tomar la foto:", error);
+                                    Alert.alert("Error", "No se pudo capturar la foto.");
+                                });
+                        }
+                    }
+                }, 1000);
             }
-        }
-    };
+
+            return () => {
+                if (timer) {
+                    clearInterval(timer);
+                }
+                setCountdown(null);
+            };
+        }, [permission?.granted, capturedImage])
+    );
 
     const retakePicture = () => {
         setCapturedImage(null);
@@ -49,23 +74,19 @@ export default function BiometricScreen() {
         setIsLoading(true);
         
         try {
-            // Paso 1: Autenticar al usuario para obtener su token y userId
             const { token, userId } = await AuthService.verifyIdentity(
                 phone!, parseInt(day!, 10), parseInt(month!, 10), parseInt(year!)
             );
 
-            // Paso 2: Convertir la imagen a formato Base64
             const imageBase64 = await FileSystem.readAsStringAsync(capturedImage, {
                 encoding: FileSystem.EncodingType.Base64,
             });
 
-            // Paso 3: Enviar la imagen para el registro facial
             await AuthService.registerFace(userId, imageBase64);
 
             Alert.alert("¡Éxito!", "Su rostro ha sido registrado correctamente.", [
                 { text: "OK", onPress: () => {
-                    // Paso 4: Completar el proceso de login en la app
-                    login(token, userId, true); // Marcamos biometría como 'true'
+                    login(token, userId, true);
                 }}
             ]);
 
@@ -75,14 +96,11 @@ export default function BiometricScreen() {
         }
     };
     
-    // --- Renderizado Condicional Actualizado ---
     if (!permission) {
-        // Los permisos aún se están cargando
         return <View style={styles.container}><ActivityIndicator size="large" color={Colors.brand.lightBlue} /></View>;
     }
 
     if (!permission.granted) {
-        // El usuario no ha concedido los permisos
         return (
             <SafeAreaView style={styles.permissionContainer}>
                 <ThemedText style={globalStyles.authTitle}>Acceso a la cámara</ThemedText>
@@ -100,12 +118,19 @@ export default function BiometricScreen() {
                 {capturedImage ? (
                     <Image source={{ uri: capturedImage }} style={styles.camera} />
                 ) : (
-                    // CAMBIO: Se usa el componente CameraView con la prop 'facing'
-                    <CameraView style={styles.camera} facing="front" ref={cameraRef} />
+                    <CameraView style={styles.camera} facing="front" ref={cameraRef}>
+                        {countdown !== null && countdown > 0 && (
+                            <View style={styles.countdownOverlay}>
+                                <Text style={styles.countdownText}>{countdown}</Text>
+                            </View>
+                        )}
+                    </CameraView>
                 )}
             </View>
 
-            <ThemedText style={globalStyles.infoText}>Centre su rostro en el marco y tome una foto.</ThemedText>
+            <ThemedText style={globalStyles.infoText}>
+                {capturedImage ? 'Revise la foto.' : 'Mantenga el rostro centrado. La foto se tomará automáticamente.'}
+            </ThemedText>
 
             <View style={styles.controlsContainer}>
                 {isLoading ? (
@@ -120,7 +145,7 @@ export default function BiometricScreen() {
                         </TouchableOpacity>
                     </View>
                 ) : (
-                    <TouchableOpacity style={styles.captureButton} onPress={takePicture} />
+                    <ThemedText style={styles.instructionText}>Prepárate...</ThemedText>
                 )}
             </View>
         </View>
@@ -134,8 +159,26 @@ const styles = StyleSheet.create({
     camera: { flex: 1 },
     controlsContainer: { height: 100, width: '100%', position: 'absolute', bottom: 40, justifyContent: 'center', alignItems: 'center' },
     previewControls: { flexDirection: 'row', justifyContent: 'space-around', width: '100%' },
-    captureButton: { width: 70, height: 70, borderRadius: 35, backgroundColor: 'white' },
     controlButton: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 25, backgroundColor: 'rgba(255, 255, 255, 0.2)' },
     confirmButton: { backgroundColor: Colors.brand.lightBlue },
-    buttonText: { color: 'white', fontSize: 16, fontWeight: 'bold' }
+    buttonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+    countdownOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.3)',
+    },
+    countdownText: {
+        fontSize: 120,
+        color: 'white',
+        fontWeight: 'bold',
+        textShadowColor: 'rgba(0, 0, 0, 0.75)',
+        textShadowOffset: { width: -1, height: 1 },
+        textShadowRadius: 10,
+    },
+    instructionText: {
+        fontSize: 18,
+        color: Colors.brand.white,
+        fontWeight: '600',
+    }
 });

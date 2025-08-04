@@ -1,9 +1,8 @@
-// backend/index.js (con logs de depuración)
+// backend/index.js
 require('dotenv').config();
 const functions = require('@google-cloud/functions-framework');
 const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
-// ... (resto de importaciones sin cambios) ...
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { RekognitionClient, IndexFacesCommand } = require('@aws-sdk/client-rekognition');
@@ -15,7 +14,6 @@ let SUPABASE_URL, SUPABASE_SERVICE_KEY, JWT_SECRET, AWS_ACCESS_KEY_ID, AWS_SECRE
 async function loadSecrets() {
     if (AWS_ACCESS_KEY_ID) return; 
     const projectId = process.env.GCP_PROJECT || 'gateway-r9gl0';
-    // ... (lógica de loadSecrets sin cambios) ...
     console.log(`Cargando secretos para el proyecto: ${projectId}`);
     const secretsToLoad = {
         SUPABASE_URL: `projects/${projectId}/secrets/SUPABASE_URL/versions/latest`,
@@ -70,7 +68,6 @@ functions.http('auth-handler', async (req, res) => {
         console.log(`Acción recibida: ${action}`);
 
         if (action === 'check-phone') {
-            // ... (sin cambios) ...
             const { phoneNumber } = req.body;
             if (!phoneNumber) { return res.status(400).send({ error: 'El parámetro phoneNumber es requerido.' }); }
             console.log(`Verificando número de teléfono: ${phoneNumber}`);
@@ -85,11 +82,9 @@ functions.http('auth-handler', async (req, res) => {
                 return res.status(400).send({ error: 'Los parámetros phoneNumber, day, month, y year son requeridos.' });
             }
             
-            // --- INICIO DE LA MODIFICACIÓN DE DEBUG ---
             console.log('--- DEBUG: VERIFY-IDENTITY ---');
             console.log(`Recibido - Teléfono: ${phoneNumber}`);
             console.log(`Recibido - Día: ${day}, Mes: ${month}, Año: ${year}`);
-
             const birthDateToVerify = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             console.log(`Construido para consulta - birth_date: '${birthDateToVerify}'`);
             
@@ -100,17 +95,9 @@ functions.http('auth-handler', async (req, res) => {
                 .eq('birth_date', birthDateToVerify)
                 .single();
 
-            // Log del resultado de la consulta
-            if (error) {
-                console.error('Error de Supabase en la consulta:', JSON.stringify(error, null, 2));
-            }
-            if (data) {
-                console.log('Datos encontrados:', JSON.stringify(data, null, 2));
-            } else {
-                console.log('No se encontraron datos que coincidan.');
-            }
+            if (error) { console.error('Error de Supabase en la consulta:', JSON.stringify(error, null, 2)); }
+            if (data) { console.log('Datos encontrados:', JSON.stringify(data, null, 2)); } else { console.log('No se encontraron datos que coincidan.'); }
             console.log('-----------------------------');
-            // --- FIN DE LA MODIFICACIÓN DE DEBUG ---
 
             if (error || !data) {
                 return res.status(403).send({ error: 'Prohibido: Credenciales inválidas.' });
@@ -122,22 +109,38 @@ functions.http('auth-handler', async (req, res) => {
             return res.status(200).send({ status: 'success', token, userId });
 
         } else if (action === 'register-face') {
-            // ... (sin cambios) ...
             const { userId, imageBase64 } = req.body;
             if (!userId || !imageBase64) { return res.status(400).send({ error: 'userId y imageBase64 son requeridos.' }); }
             console.log(`Registrando rostro para userId: ${userId}`);
-            const AWS_REGION = 'us-east-2'; const S3_BUCKET_NAME = 'noxtla-guardian-gate-faces'; const REKOGNITION_COLLECTION_ID = 'guardian_gate_employees';
+
+            const AWS_REGION = 'us-east-2';
+            const S3_BUCKET_NAME = 'noxtla-guardian-gate-faces';
+            const REKOGNITION_COLLECTION_ID = 'guardian_gate_employees';
             const s3Client = new S3Client({ region: AWS_REGION, credentials: { accessKeyId: AWS_ACCESS_KEY_ID, secretAccessKey: AWS_SECRET_ACCESS_KEY } });
             const rekognitionClient = new RekognitionClient({ region: AWS_REGION, credentials: { accessKeyId: AWS_ACCESS_KEY_ID, secretAccessKey: AWS_SECRET_ACCESS_KEY } });
+            
             const imageBuffer = Buffer.from(imageBase64, 'base64');
             const s3Key = `${userId}/profile.jpg`;
+
+            // Subimos la imagen a S3 como antes (esto es bueno para tener un respaldo).
             await s3Client.send(new PutObjectCommand({ Bucket: S3_BUCKET_NAME, Key: s3Key, Body: imageBuffer, ContentType: 'image/jpeg' }));
             console.log(`Imagen subida a S3: ${s3Key}`);
-            const { FaceRecords } = await rekognitionClient.send(new IndexFacesCommand({ CollectionId: REKOGNITION_COLLECTION_ID, ExternalImageId: userId, Image: { S3Object: { Bucket: S3_BUCKET_NAME, Name: s3Key } }, MaxFaces: 1, QualityFilter: "AUTO" }));
+
+            // [CORRECCIÓN CLAVE] Pasamos el buffer de la imagen directamente a Rekognition.
+            const { FaceRecords } = await rekognitionClient.send(new IndexFacesCommand({
+                CollectionId: REKOGNITION_COLLECTION_ID,
+                ExternalImageId: userId,
+                Image: { Bytes: imageBuffer }, // En lugar de referenciar el objeto S3, pasamos los bytes.
+                MaxFaces: 1,
+                QualityFilter: "AUTO"
+            }));
+
             if (!FaceRecords || FaceRecords.length === 0) { throw new Error('No se detectó ningún rostro en la imagen proporcionada.'); }
             console.log(`Rostro indexado en Rekognition. FaceId: ${FaceRecords[0].Face.FaceId}`);
+            
             const { error: updateError } = await supabase.from('employees').update({ is_biometric_enabled: true }).eq('id', userId);
             if (updateError) throw updateError;
+            
             console.log(`Base de datos actualizada para userId: ${userId}`);
             return res.status(200).send({ status: 'success', message: 'Rostro registrado exitosamente.' });
         } else {
