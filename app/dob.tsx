@@ -23,7 +23,6 @@ import { useAnimatedShake } from '@/hooks/useAnimatedShake';
 import { AuthService } from '@/services/authService';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
-// --- Constantes y Helpers ---
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MAX_ATTEMPTS = 3;
 
@@ -34,9 +33,9 @@ const getDaysInMonth = (monthIndex: number, year: number): number => {
   return 31;
 };
 
-// --- Componente Principal ---
 export default function DobScreen() {
-  const { phone } = useLocalSearchParams<{ phone: string }>();
+  const { employeeId } = useLocalSearchParams<{ employeeId: string }>();
+  
   const [year, setYear] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -81,11 +80,15 @@ export default function DobScreen() {
     Keyboard.dismiss(); 
     setIsLoading(true);
     try {
-      const { token, userId } = await AuthService.verifyIdentity(phone!, selectedDay!, selectedMonth! + 1, parseInt(year, 10));
+      // Usamos `employeeId` en la llamada al servicio
+      const { token, userId } = await AuthService.verifyIdentity(employeeId!, selectedDay!, selectedMonth! + 1, parseInt(year, 10));
+      
       await AsyncStorage.removeItem('@auth_fail_attempts');
+      
       router.push({
         pathname: '/biometric',
-        params: { phone, month: selectedMonth! + 1, day: selectedDay!, year, userId, token },
+        // Pasamos `employeeId` a la siguiente pantalla
+        params: { employeeId, month: selectedMonth! + 1, day: selectedDay!, year, userId, token },
       });
     } catch (error) {
       handleFailedAttempt();
@@ -115,12 +118,14 @@ export default function DobScreen() {
       setSelectedDay(null); 
       setSelectedMonth(null); 
       setYear('');
+      // --- LÍNEA CORREGIDA ---
       yearInputRef.current?.focus();
     }
   };
 
   const handleYearChange = (text: string) => {
-    setYear(text);
+    const numericText = text.replace(/[^0-9]/g, '');
+    setYear(numericText);
     setSelectedDay(null);
   };
 
@@ -130,9 +135,7 @@ export default function DobScreen() {
   };
 
   const daysInSelectedMonth = useMemo(() => {
-    if (year.length !== 4 || selectedMonth === null) {
-      return 0;
-    }
+    if (year.length !== 4 || selectedMonth === null) return 0;
     return getDaysInMonth(selectedMonth, parseInt(year));
   }, [selectedMonth, year]);
   const daysArray = Array.from({ length: daysInSelectedMonth }, (_, i) => i + 1);
@@ -209,7 +212,6 @@ export default function DobScreen() {
   );
 }
 
-// --- Estilos ---
 const styles = StyleSheet.create({
   staticHeader: { paddingHorizontal: 20, paddingTop: 10 },
   scrollContainer: { flexGrow: 1, paddingHorizontal: 20 },
