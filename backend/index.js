@@ -1,4 +1,3 @@
-// backend/index.js
 require('dotenv').config();
 const functions = require('@google-cloud/functions-framework');
 const { createClient } = require('@supabase/supabase-js');
@@ -6,7 +5,6 @@ const jwt = require('jsonwebtoken');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { RekognitionClient, IndexFacesCommand } = require('@aws-sdk/client-rekognition');
-
 
 const secretManagerClient = new SecretManagerServiceClient();
 let SUPABASE_URL, SUPABASE_SERVICE_KEY, JWT_SECRET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY;
@@ -67,39 +65,58 @@ functions.http('auth-handler', async (req, res) => {
         const { action } = req.body;
         console.log(`Acción recibida: ${action}`);
 
-        if (action === 'check-phone') {
-            const { phoneNumber } = req.body;
-            if (!phoneNumber) { return res.status(400).send({ error: 'El parámetro phoneNumber es requerido.' }); }
-            console.log(`Verificando número de teléfono: ${phoneNumber}`);
-            const { data, error } = await supabase.from('auth_users').select('status_name').eq('phone_number', phoneNumber).single();
-            if (error && error.code !== 'PGRST116') { console.error("Error de Supabase en check-phone:", error); throw error; }
-            const userFound = !!(data && data.status_name === 'Active');
-            console.log(`Usuario encontrado y activo: ${userFound}`);
-            return res.status(200).send({ status: 'success', userFound });
-        } else if (action === 'verify-identity') {
-            const { phoneNumber, day, month, year } = req.body;
-            if (!phoneNumber || !day || !month || !year) {
-                return res.status(400).send({ error: 'Los parámetros phoneNumber, day, month, y year son requeridos.' });
+        if (action === 'check-employee-id') {
+            const { employeeId } = req.body;
+            if (!employeeId) { return res.status(400).send({ error: 'El parámetro employeeId es requerido.' }); }
+            
+            const idAsString = String(employeeId).trim();
+            if (!/^\d+$/.test(idAsString) || idAsString.length < 6 || idAsString.length > 12) {
+                return res.status(400).send({ error: 'El employeeId debe ser un número entre 6 y 12 dígitos.' });
+            }
+            const numericEmployeeId = parseInt(idAsString, 10);
+            
+            console.log(`Verificando ID de empleado: ${numericEmployeeId}`);
+            
+            const { data, error } = await supabase
+                .from('auth_users')
+                .select('status_name')
+                .eq('employee_id', numericEmployeeId)
+                .single();
+
+            if (error && error.code !== 'PGRST116') {
+                console.error("Error de Supabase en check-employee-id:", error);
+                throw error;
             }
             
-            console.log('--- DEBUG: VERIFY-IDENTITY ---');
-            console.log(`Recibido - Teléfono: ${phoneNumber}`);
-            console.log(`Recibido - Día: ${day}, Mes: ${month}, Año: ${year}`);
+            const userFound = !!(data && data.status_name === 'Active');
+            console.log(`Empleado encontrado y activo: ${userFound}`);
+            
+            return res.status(200).send({ status: 'success', userFound });
+
+        } else if (action === 'verify-identity') {
+            const { employeeId, day, month, year } = req.body;
+            if (!employeeId || !day || !month || !year) {
+                return res.status(400).send({ error: 'Los parámetros employeeId, day, month, y year son requeridos.' });
+            }
+            
+            const idAsString = String(employeeId).trim();
+            if (!/^\d+$/.test(idAsString)) {
+                return res.status(400).send({ error: 'El employeeId debe ser un número.' });
+            }
+            const numericEmployeeId = parseInt(idAsString, 10);
+            
             const birthDateToVerify = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            console.log(`Construido para consulta - birth_date: '${birthDateToVerify}'`);
+            console.log(`Verificando identidad para ${numericEmployeeId} con fecha de nacimiento ${birthDateToVerify}`);
             
             const { data, error } = await supabase
                 .from('auth_users')
                 .select('employee_uuid')
-                .eq('phone_number', phoneNumber)
+                .eq('employee_id', numericEmployeeId)
                 .eq('birth_date', birthDateToVerify)
                 .single();
 
-            if (error) { console.error('Error de Supabase en la consulta:', JSON.stringify(error, null, 2)); }
-            if (data) { console.log('Datos encontrados:', JSON.stringify(data, null, 2)); } else { console.log('No se encontraron datos que coincidan.'); }
-            console.log('-----------------------------');
-
             if (error || !data) {
+                console.warn('Fallo en la verificación de identidad:', { employeeId, error });
                 return res.status(403).send({ error: 'Prohibido: Credenciales inválidas.' });
             }
             
@@ -122,15 +139,13 @@ functions.http('auth-handler', async (req, res) => {
             const imageBuffer = Buffer.from(imageBase64, 'base64');
             const s3Key = `${userId}/profile.jpg`;
 
-            // Subimos la imagen a S3 como antes (esto es bueno para tener un respaldo).
             await s3Client.send(new PutObjectCommand({ Bucket: S3_BUCKET_NAME, Key: s3Key, Body: imageBuffer, ContentType: 'image/jpeg' }));
             console.log(`Imagen subida a S3: ${s3Key}`);
 
-            // [CORRECCIÓN CLAVE] Pasamos el buffer de la imagen directamente a Rekognition.
             const { FaceRecords } = await rekognitionClient.send(new IndexFacesCommand({
                 CollectionId: REKOGNITION_COLLECTION_ID,
                 ExternalImageId: userId,
-                Image: { Bytes: imageBuffer }, // En lugar de referenciar el objeto S3, pasamos los bytes.
+                Image: { Bytes: imageBuffer },
                 MaxFaces: 1,
                 QualityFilter: "AUTO"
             }));
@@ -138,6 +153,7 @@ functions.http('auth-handler', async (req, res) => {
             if (!FaceRecords || FaceRecords.length === 0) { throw new Error('No se detectó ningún rostro en la imagen proporcionada.'); }
             console.log(`Rostro indexado en Rekognition. FaceId: ${FaceRecords[0].Face.FaceId}`);
             
+            // --- LÍNEA CORREGIDA ---
             const { error: updateError } = await supabase.from('employees').update({ is_biometric_enabled: true }).eq('id', userId);
             if (updateError) throw updateError;
             

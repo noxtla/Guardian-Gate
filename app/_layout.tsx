@@ -6,16 +6,13 @@ import { Stack, SplashScreen } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-// Se importan Dimensions y Platform para los cálculos locales
 import { TouchableOpacity, Platform, Dimensions } from 'react-native';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
-// import { IconSymbol } from '@/components/ui/IconSymbol'; // <-- REMOVED: No longer needed.
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { useEffect } from 'react';
 
-// --- INICIO: LÓGICA DE CÁLCULO LOCAL PARA LA PRUEBA ---
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GUIDELINE_BASE_WIDTH = 390;
 
@@ -23,17 +20,8 @@ const scale = (size: number) => (SCREEN_WIDTH / GUIDELINE_BASE_WIDTH) * size;
 
 const moderateScale = (size: number, factor = 0.5): number => {
   const newSize = size + (scale(size) - size) * factor;
-  return Math.round(newSize); // Se asegura de devolver un entero
+  return Math.round(newSize);
 };
-// --- FIN: LÓGICA DE CÁLCULO LOCAL ---
-
-
-// --- REMOVED: The HeaderCameraIcon component is no longer needed. ---
-// const HeaderCameraIcon = () => (
-//   <TouchableOpacity style={{ marginRight: 15 }}>
-//     <IconSymbol name="camera.fill" color={Colors.brand.white} size={26} />
-//   </TouchableOpacity>
-// );
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -83,17 +71,11 @@ function RootLayoutNav() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: {
-          backgroundColor: Colors.brand.darkBlue,
-        },
+        headerStyle: { backgroundColor: Colors.brand.darkBlue },
         headerTintColor: Colors.brand.white,
         headerTitleStyle: {
           fontFamily: 'OpenSans-SemiBold',
-          fontSize: Platform.select({
-            ios: 22,
-            // Se usa la función moderateScale local
-            android: moderateScale(20, 0.4),
-          }),
+          fontSize: Platform.select({ ios: 22, android: moderateScale(20, 0.4) }),
         },
         headerTitleAlign: 'center',
         headerShadowVisible: false,
@@ -106,12 +88,7 @@ function RootLayoutNav() {
             headerShown: true,
             headerTitle: 'Tree Service',
             headerBackVisible: false,
-            // --- REMOVED: The headerRight property is no longer needed. ---
-            // headerRight: () => <HeaderCameraIcon />,
-            headerTitleStyle: {
-              fontFamily: 'OpenSans-SemiBold',
-              fontSize: 22,
-            },
+            headerTitleStyle: { fontFamily: 'OpenSans-SemiBold', fontSize: 22 },
           }}
         />
       ) : (
@@ -120,7 +97,7 @@ function RootLayoutNav() {
           <Stack.Screen key="otc" name="otc" options={{ title: 'Enter Code' }} />,
           <Stack.Screen key="ssn" name="ssn" options={{ title: 'Enter your SSN' }} />,
           <Stack.Screen key="dob" name="dob" options={{ title: 'Date of Birth' }} />,
-          <Stack.Screen key="year" name="year" options={{ title: 'Year of Birth' }} />,
+          // --- CORRECCIÓN: Se elimina la ruta 'year' que no existe ---
           <Stack.Screen key="biometric" name="biometric" options={{ title: 'Biometric Verification' }} />,
         ]
       )}

@@ -9,71 +9,62 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   ActivityIndicator,
-  Alert, // <-- IMPORTANTE: Necesitamos Alert para los errores
+  Alert,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
-import PhoneInput from '@/components/PhoneInput';
 import { Colors } from '@/constants/Colors';
 import { globalStyles } from '@/constants/AppStyles';
-import { AuthService } from '@/services/authService'; // <-- IMPORTANTE: Descomentar o añadir esta línea
+import { AuthService } from '@/services/authService';
 import { useAuth } from '@/context/AuthContext'; 
 
 export default function GuardianGateScreen() {
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [isPhoneValid, setIsPhoneValid] = useState(false);
+  const [employeeId, setEmployeeId] = useState('');
+  const [isIdValid, setIsIdValid] = useState(false);
   const [isInputVisible, setIsInputVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false); 
   const [isLoadingFaceId, setIsLoadingFaceId] = useState(false); 
 
   const { login } = useAuth(); 
 
-  const handlePhoneNumberChange = useCallback((number: string) => {
-    // Asumimos que el PhoneInput devuelve el número en formato internacional E.164
-    setPhoneNumber(number);
+  const handleIdChange = useCallback((id: string) => {
+    const numericId = id.replace(/[^0-9]/g, '');
+    
+    // --- LÍNEA CORREGIDA ---
+    const trimmedId = numericId.substring(0, 12);
+    
+    setEmployeeId(trimmedId);
+    
+    setIsIdValid(trimmedId.length >= 6 && trimmedId.length <= 12);
   }, []);
 
-  const handleValidationChange = useCallback((isValid: boolean) => {
-    setIsPhoneValid(isValid);
-  }, []);
-
-  // --- LÓGICA MODIFICADA ---
   const handleContinue = async () => {
-    // Primer click: solo muestra el campo de texto.
     if (!isInputVisible) {
       setIsInputVisible(true);
       return;
     }
 
-    // Segundo click (con el campo visible): inicia la verificación.
-    if (!isPhoneValid || isLoading) return;
+    if (!isIdValid || isLoading) return;
 
     Keyboard.dismiss();
     setIsLoading(true);
     
     try {
-      // 1. LLAMADA AL BACKEND REAL
-      const userFound = await AuthService.checkPhoneNumber(phoneNumber);
+      const userFound = await AuthService.checkEmployeeId(employeeId);
 
-      // 2. MANEJO DE LA RESPUESTA
       if (userFound) {
-        // El usuario existe y está activo. Ahora podemos proceder.
-        // En un futuro, aquí llamaríamos a AuthService.sendOtp(phoneNumber)
-        console.log('User found. Simulating sending OTP to:', phoneNumber);
-        // Por ahora, navegamos a la pantalla de OTC como lo tenías.
-        // Pasamos el número como parámetro para usarlo en la siguiente pantalla.
-        router.push({ pathname: '/otc', params: { phone: phoneNumber } });
+        console.log('Empleado encontrado. Procediendo...');
+        router.push({ pathname: '/dob', params: { employeeId: employeeId } }); 
       } else {
-        // El usuario no existe o no está activo. Mostramos un error claro.
         Alert.alert(
           'Acceso Denegado',
-          'El número de teléfono no está registrado o no se encuentra activo. Por favor, contacte a un administrador.'
+          'El ID de empleado no está registrado o no se encuentra activo.'
         );
       }
     } catch (error: any) {
-      // Si la llamada al backend falla (red, error 500), mostramos el error.
       Alert.alert('Error', error.message || 'No se pudo conectar con el servidor.');
     } finally {
       setIsLoading(false);
@@ -81,7 +72,6 @@ export default function GuardianGateScreen() {
   };
 
   const handleFaceIdLogin = async () => {
-    // Esta lógica de Face ID se mantiene igual por ahora.
     console.log('Attempting FaceId login...');
     setIsLoadingFaceId(true);
     try {
@@ -95,7 +85,6 @@ export default function GuardianGateScreen() {
     }
   };
 
-  // El resto de tu componente (el return) es perfecto y no necesita cambios.
   return (
     <SafeAreaView style={globalStyles.darkScreenContainer} edges={['bottom']}>
       <KeyboardAvoidingView
@@ -108,16 +97,23 @@ export default function GuardianGateScreen() {
             <View style={styles.inputContainer}>
               {isInputVisible ? (
                 <>
-                  <PhoneInput
-                    onPhoneNumberChange={handlePhoneNumberChange}
-                    onValidationChange={handleValidationChange}
+                  <TextInput
+                    style={globalStyles.textInput}
+                    placeholder="Enter your Employee ID"
+                    placeholderTextColor={Colors.brand.gray}
+                    value={employeeId}
+                    onChangeText={handleIdChange}
+                    autoCapitalize="none"
+                    keyboardType="number-pad"
+                    maxLength={12}
+                    autoFocus
                   />
                   <TouchableOpacity
                     style={[
                       globalStyles.primaryButton,
-                      (!isPhoneValid || isLoading) && globalStyles.disabledButton,
+                      (!isIdValid || isLoading) && globalStyles.disabledButton,
                     ]}
-                    disabled={!isPhoneValid || isLoading}
+                    disabled={!isIdValid || isLoading}
                     onPress={handleContinue}>
                     {isLoading ? (
                       <ActivityIndicator color={Colors.brand.white} />
@@ -132,7 +128,7 @@ export default function GuardianGateScreen() {
                     style={globalStyles.primaryButton}
                     onPress={handleContinue}>
                     <ThemedText style={globalStyles.primaryButtonText}>
-                      Enter your phone number
+                      Enter your Employee ID
                     </ThemedText>
                   </TouchableOpacity>
 
