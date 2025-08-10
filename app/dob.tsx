@@ -79,18 +79,31 @@ export default function DobScreen() {
     if (isContinueDisabled) return;
     Keyboard.dismiss(); 
     setIsLoading(true);
+
+    const monthToSend = selectedMonth! + 1;
+
     try {
-      // Usamos `employeeId` en la llamada al servicio
-      const { token, userId } = await AuthService.verifyIdentity(employeeId!, selectedDay!, selectedMonth! + 1, parseInt(year, 10));
+      const { token, userId, isBiometricEnabled } = await AuthService.verifyIdentity(
+          employeeId!, 
+          selectedDay!, 
+          monthToSend,
+          parseInt(year, 10)
+      );
       
       await AsyncStorage.removeItem('@auth_fail_attempts');
       
+      console.log(`[DOB] Navegando a /biometric...`);
       router.push({
-        pathname: '/biometric',
-        // Pasamos `employeeId` a la siguiente pantalla
-        params: { employeeId, month: selectedMonth! + 1, day: selectedDay!, year, userId, token },
+        pathname: '/biometric', // <-- CORRECCIÓN: Volver a apuntar a /biometric
+        params: { 
+          userId, 
+          token,
+          isBiometricEnabled: isBiometricEnabled.toString(),
+        },
       });
-    } catch (error) {
+
+    } catch (error: any) {
+      console.error("[DOB] Error en la verificación:", error.message);
       handleFailedAttempt();
     } finally {
       setIsLoading(false);
@@ -118,7 +131,6 @@ export default function DobScreen() {
       setSelectedDay(null); 
       setSelectedMonth(null); 
       setYear('');
-      // --- LÍNEA CORREGIDA ---
       yearInputRef.current?.focus();
     }
   };
