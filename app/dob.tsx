@@ -79,18 +79,44 @@ export default function DobScreen() {
     if (isContinueDisabled) return;
     Keyboard.dismiss(); 
     setIsLoading(true);
+
+    // --- INICIO DEL PARCHE DE DEPURACIÓN ---
+    console.log("======================================");
+    console.log("[DOB DEBUG] Iniciando verificación...");
+    console.log(`[DOB DEBUG] Employee ID: ${employeeId}`);
+    console.log(`[DOB DEBUG] Datos seleccionados: Day=${selectedDay}, Month=${selectedMonth}, Year=${year}`);
+    
+    const monthToSend = selectedMonth! + 1;
+    console.log(`[DOB DEBUG] Mes a enviar (1-12): ${monthToSend}`);
+    // --- FIN DEL PARCHE DE DEPURACIÓN ---
+
     try {
-      // Usamos `employeeId` en la llamada al servicio
-      const { token, userId } = await AuthService.verifyIdentity(employeeId!, selectedDay!, selectedMonth! + 1, parseInt(year, 10));
+      const { token, userId, isBiometricEnabled } = await AuthService.verifyIdentity(
+          employeeId!, 
+          selectedDay!, 
+          monthToSend,
+          parseInt(year, 10)
+      );
+      
+      console.log("[DOB DEBUG] Verificación exitosa. Recibido:", { userId, token, isBiometricEnabled });
       
       await AsyncStorage.removeItem('@auth_fail_attempts');
       
       router.push({
         pathname: '/biometric',
-        // Pasamos `employeeId` a la siguiente pantalla
-        params: { employeeId, month: selectedMonth! + 1, day: selectedDay!, year, userId, token },
+        params: { 
+          phone: 'N/A',
+          month: monthToSend.toString(), 
+          day: selectedDay!.toString(), 
+          year, 
+          userId, 
+          token,
+          isBiometricEnabled: isBiometricEnabled.toString(),
+        },
       });
-    } catch (error) {
+
+    } catch (error: any) {
+      console.error("[DOB DEBUG] Error en la verificación:", error.message);
       handleFailedAttempt();
     } finally {
       setIsLoading(false);
@@ -118,7 +144,6 @@ export default function DobScreen() {
       setSelectedDay(null); 
       setSelectedMonth(null); 
       setYear('');
-      // --- LÍNEA CORREGIDA ---
       yearInputRef.current?.focus();
     }
   };

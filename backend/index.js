@@ -1,16 +1,19 @@
+// backend/index.js (VERSIÓN DE DEPURACIÓN FINAL)
+
 require('dotenv').config();
 const functions = require('@google-cloud/functions-framework');
 const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-const { RekognitionClient, IndexFacesCommand } = require('@aws-sdk/client-rekognition');
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+const { RekognitionClient, IndexFacesCommand, SearchFacesByImageCommand } = require('@aws-sdk/client-rekognition');
 
 const secretManagerClient = new SecretManagerServiceClient();
 let SUPABASE_URL, SUPABASE_SERVICE_KEY, JWT_SECRET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY;
 
 async function loadSecrets() {
-    if (AWS_ACCESS_KEY_ID) return; 
+    if (SUPABASE_URL) return;
     const projectId = process.env.GCP_PROJECT || 'gateway-r9gl0';
     console.log(`Cargando secretos para el proyecto: ${projectId}`);
     const secretsToLoad = {
@@ -41,130 +44,115 @@ async function loadSecrets() {
         if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !JWT_SECRET || !AWS_ACCESS_KEY_ID || !AWS_SECRET_ACCESS_KEY) {
             throw new Error("Uno o más valores de secretos están vacíos después de la carga.");
         }
-        console.log("✅ Todos los secretos se han cargado correctamente.");
     } catch (error) {
         console.error("CRÍTICO: El proceso de carga de secretos falló.", error);
         throw error;
     }
 }
 
+function verifyToken(req) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        throw new Error('Missing or invalid authorization header');
+    }
+    const token = authHeader.split(' ')[1];
+    try {
+        return jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+        throw new Error('Invalid or expired token');
+    }
+}
 
 functions.http('auth-handler', async (req, res) => {
-    res.set('Access-control-Allow-Origin', '*');
-    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.set('Access-Control-Allow-Headers', 'Content-Type');
-    if (req.method === 'OPTIONS') { return res.status(204).send(''); }
-    try { await loadSecrets(); } catch (error) {
-        console.error('CRÍTICO: FALLÓ LA CARGA DE SECRETOS EN EL HANDLER.', error);
-        return res.status(500).send({ error: 'Internal Server Error: Could not load configuration.' });
-    }
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    if (req.method !== 'POST') { return res.status(405).send({ error: 'Method Not Allowed' }); }
-
     try {
+        res.set('Access-control-Allow-Origin', '*');
+        res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        if (req.method === 'OPTIONS') { return res.status(204).send(''); }
+
+        await loadSecrets();
+        const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
         const { action } = req.body;
-        console.log(`Acción recibida: ${action}`);
+        console.log(`\n\n--- Nueva Petición --- Acción: ${action}`);
 
         if (action === 'check-employee-id') {
             const { employeeId } = req.body;
-            if (!employeeId) { return res.status(400).send({ error: 'El parámetro employeeId es requerido.' }); }
-            
-            const idAsString = String(employeeId).trim();
-            if (!/^\d+$/.test(idAsString) || idAsString.length < 6 || idAsString.length > 12) {
-                return res.status(400).send({ error: 'El employeeId debe ser un número entre 6 y 12 dígitos.' });
-            }
-            const numericEmployeeId = parseInt(idAsString, 10);
-            
-            console.log(`Verificando ID de empleado: ${numericEmployeeId}`);
-            
-            const { data, error } = await supabase
-                .from('auth_users')
-                .select('status_name')
-                .eq('employee_id', numericEmployeeId)
-                .single();
-
-            if (error && error.code !== 'PGRST116') {
-                console.error("Error de Supabase en check-employee-id:", error);
-                throw error;
-            }
-            
+            const { data } = await supabase.from('auth_users').select('status_name').eq('employee_id', parseInt(String(employeeId).trim(), 10)).single();
             const userFound = !!(data && data.status_name === 'Active');
-            console.log(`Empleado encontrado y activo: ${userFound}`);
-            
+            console.log(`[check-employee-id] Resultado para ${employeeId}: ${userFound}`);
             return res.status(200).send({ status: 'success', userFound });
 
         } else if (action === 'verify-identity') {
             const { employeeId, day, month, year } = req.body;
-            if (!employeeId || !day || !month || !year) {
-                return res.status(400).send({ error: 'Los parámetros employeeId, day, month, y year son requeridos.' });
-            }
-            
-            const idAsString = String(employeeId).trim();
-            if (!/^\d+$/.test(idAsString)) {
-                return res.status(400).send({ error: 'El employeeId debe ser un número.' });
-            }
-            const numericEmployeeId = parseInt(idAsString, 10);
-            
+            console.log(`[verify-identity] Verificando:`, { employeeId, day, month, year });
             const birthDateToVerify = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            console.log(`Verificando identidad para ${numericEmployeeId} con fecha de nacimiento ${birthDateToVerify}`);
-            
-            const { data, error } = await supabase
-                .from('auth_users')
-                .select('employee_uuid')
-                .eq('employee_id', numericEmployeeId)
-                .eq('birth_date', birthDateToVerify)
-                .single();
-
-            if (error || !data) {
-                console.warn('Fallo en la verificación de identidad:', { employeeId, error });
-                return res.status(403).send({ error: 'Prohibido: Credenciales inválidas.' });
+            const { data, error } = await supabase.from('auth_users').select('employee_uuid, is_biometric_enabled').eq('employee_id', parseInt(String(employeeId).trim(), 10)).eq('birth_date', birthDateToVerify).single();
+            if (error && error.code !== 'PGRST116' || !data) {
+                console.error(`[verify-identity] Fallo en la consulta o no se encontraron datos. Error:`, error);
+                return res.status(403).send({ error: 'Credenciales inválidas.' });
             }
-            
-            const userId = data.employee_uuid;
-            const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '1d' });
-            console.log(`Identidad verificada para userId: ${userId}. Token generado.`);
-            return res.status(200).send({ status: 'success', token, userId });
+            const { employee_uuid: userId, is_biometric_enabled: isBiometricEnabled } = data;
+            const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '15m' });
+            console.log(`[verify-identity] Éxito. userId: ${userId}, token generado.`);
+            return res.status(200).send({ status: 'success', token, userId, isBiometricEnabled });
 
-        } else if (action === 'register-face') {
-            const { userId, imageBase64 } = req.body;
-            if (!userId || !imageBase64) { return res.status(400).send({ error: 'userId y imageBase64 son requeridos.' }); }
-            console.log(`Registrando rostro para userId: ${userId}`);
-
-            const AWS_REGION = 'us-east-2';
-            const S3_BUCKET_NAME = 'noxtla-guardian-gate-faces';
-            const REKOGNITION_COLLECTION_ID = 'guardian_gate_employees';
-            const s3Client = new S3Client({ region: AWS_REGION, credentials: { accessKeyId: AWS_ACCESS_KEY_ID, secretAccessKey: AWS_SECRET_ACCESS_KEY } });
-            const rekognitionClient = new RekognitionClient({ region: AWS_REGION, credentials: { accessKeyId: AWS_ACCESS_KEY_ID, secretAccessKey: AWS_SECRET_ACCESS_KEY } });
+        } else if (action === 'get-upload-url') {
+            const decodedToken = verifyToken(req);
+            const { userId } = req.body;
+            if (decodedToken.userId !== userId) return res.status(403).send({ error: 'Token no coincide con el usuario.' });
             
-            const imageBuffer = Buffer.from(imageBase64, 'base64');
+            console.log(`[get-upload-url] Generando URL para userId: ${userId}`);
+            const s3Client = new S3Client({ region: 'us-east-2', credentials: { accessKeyId: AWS_ACCESS_KEY_ID, secretAccessKey: AWS_SECRET_ACCESS_KEY } });
             const s3Key = `${userId}/profile.jpg`;
+            const command = new PutObjectCommand({ Bucket: 'noxtla-guardian-gate-faces', Key: s3Key, ContentType: 'image/jpeg' });
+            const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
+            console.log(`[get-upload-url] URL generada exitosamente.`);
+            return res.status(200).send({ status: 'success', uploadUrl, s3Key });
 
-            await s3Client.send(new PutObjectCommand({ Bucket: S3_BUCKET_NAME, Key: s3Key, Body: imageBuffer, ContentType: 'image/jpeg' }));
-            console.log(`Imagen subida a S3: ${s3Key}`);
-
-            const { FaceRecords } = await rekognitionClient.send(new IndexFacesCommand({
-                CollectionId: REKOGNITION_COLLECTION_ID,
-                ExternalImageId: userId,
-                Image: { Bytes: imageBuffer },
-                MaxFaces: 1,
-                QualityFilter: "AUTO"
-            }));
-
-            if (!FaceRecords || FaceRecords.length === 0) { throw new Error('No se detectó ningún rostro en la imagen proporcionada.'); }
-            console.log(`Rostro indexado en Rekognition. FaceId: ${FaceRecords[0].Face.FaceId}`);
+        } else if (action === 'process-face-image') {
+            const decodedToken = verifyToken(req);
+            const { userId, s3Key, isBiometricEnabled } = req.body;
+            if (decodedToken.userId !== userId) return res.status(403).send({ error: 'Token no coincide con el usuario.' });
             
-            // --- LÍNEA CORREGIDA ---
-            const { error: updateError } = await supabase.from('employees').update({ is_biometric_enabled: true }).eq('id', userId);
-            if (updateError) throw updateError;
-            
-            console.log(`Base de datos actualizada para userId: ${userId}`);
-            return res.status(200).send({ status: 'success', message: 'Rostro registrado exitosamente.' });
+            console.log(`[process-face-image] Procesando para userId: ${userId}. Biometría activada: ${isBiometricEnabled}`);
+            const rekognitionClient = new RekognitionClient({ region: 'us-east-2', credentials: { accessKeyId: AWS_ACCESS_KEY_ID, secretAccessKey: AWS_SECRET_ACCESS_KEY } });
+            const imageReference = { S3Object: { Bucket: 'noxtla-guardian-gate-faces', Name: s3Key } };
+
+            if (isBiometricEnabled === false) {
+                console.log(`[process-face-image] Indexando nueva cara...`);
+                const { FaceRecords } = await rekognitionClient.send(new IndexFacesCommand({ CollectionId: 'guardian_gate_employees', ExternalImageId: userId, Image: imageReference, MaxFaces: 1, QualityFilter: "AUTO" }));
+                if (!FaceRecords || FaceRecords.length === 0) throw new Error('No se detectó un rostro en la imagen.');
+                
+                // ¡¡ATENCIÓN!! Si tu tabla de usuarios no se llama 'employees' o la PK no es 'id', ESTA LÍNEA FALLARÁ.
+                // Cámbiala por los nombres correctos, ej: .from('auth_users')...eq('employee_uuid', userId)
+                const { error: updateError } = await supabase.from('employees').update({ is_biometric_enabled: true }).eq('id', userId);
+                if (updateError) {
+                    console.error("Error al actualizar Supabase:", updateError);
+                    throw updateError;
+                };
+                
+                console.log(`[process-face-image] Cara indexada y DB actualizada.`);
+                return res.status(200).send({ status: 'success', message: 'Rostro registrado exitosamente.' });
+            } else {
+                console.log(`[process-face-image] Buscando cara existente...`);
+                const { FaceMatches } = await rekognitionClient.send(new SearchFacesByImageCommand({ CollectionId: 'guardian_gate_employees', Image: imageReference, FaceMatchThreshold: 98, MaxFaces: 1 }));
+                if (!FaceMatches || FaceMatches.length === 0) return res.status(404).send({ error: 'Su rostro no coincide con nuestros registros.' });
+                
+                const matchedUserId = FaceMatches[0].Face?.ExternalImageId;
+                if (matchedUserId === userId) {
+                    console.log(`[process-face-image] Coincidencia encontrada y correcta.`);
+                    return res.status(200).send({ status: 'success', message: 'Verificación de rostro exitosa.' });
+                } else {
+                    console.warn(`[process-face-image] Coincidencia encontrada pero no pertenece al usuario. Encontrado: ${matchedUserId}, esperado: ${userId}`);
+                    return res.status(403).send({ error: 'El rostro no pertenece a este usuario.' });
+                }
+            }
         } else {
-            console.warn(`Acción desconocida recibida: ${action}`);
-            return res.status(400).send({ error: 'Acción desconocida' });
+            return res.status(400).send({ error: 'Acción desconocida.' });
         }
+
     } catch (err) {
-        console.error('Error en auth-handler:', err);
-        return res.status(500).send({ error: err.message || 'Ocurrió un error interno en el servidor.' });
+        console.error('--- ERROR GLOBAL CAPTURADO ---', { message: err.message, stack: err.stack });
+        return res.status(500).send({ error: 'Ocurrió un error interno.', details: err.message });
     }
 });

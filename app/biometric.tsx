@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Alert, View, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Button, Text } from 'react-native';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system'; // <-- ¡Importación clave!
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { globalStyles } from '@/constants/AppStyles';
@@ -14,7 +14,13 @@ import { useAuth } from '@/context/AuthContext';
 import { AuthService } from '@/services/authService';
 
 export default function BiometricScreen() {
-    const { phone, month, day, year } = useLocalSearchParams<{ phone: string; month: string; day: string; year: string }>();
+    const { userId, token, isBiometricEnabled: isBiometricEnabledStr } = useLocalSearchParams<{
+        userId: string;
+        token: string;
+        isBiometricEnabled: string;
+    }>();
+
+    const isBiometricEnabled = isBiometricEnabledStr === 'true';
     const { login } = useAuth();
     
     const [permission, requestPermission] = useCameraPermissions();
@@ -26,40 +32,27 @@ export default function BiometricScreen() {
 
     useFocusEffect(
         useCallback(() => {
-            // [CORRECCIÓN] Se usa ReturnType<typeof setInterval> para que el tipo sea universal
-            // y compatible con el 'number' que devuelve en React Native.
             let timer: ReturnType<typeof setInterval> | undefined;
-
             if (permission?.granted && !capturedImage) {
                 let currentCount = 3;
                 setCountdown(currentCount);
-
                 timer = setInterval(() => {
                     currentCount -= 1;
                     setCountdown(currentCount);
-
                     if (currentCount === 0) {
                         clearInterval(timer);
                         setCountdown(null);
-                        
-                        if (cameraRef.current) {
-                            cameraRef.current.takePictureAsync({ quality: 0.5 })
-                                .then(photo => {
-                                    setCapturedImage(photo.uri);
-                                })
-                                .catch(error => {
-                                    console.error("Fallo al tomar la foto:", error);
-                                    Alert.alert("Error", "No se pudo capturar la foto.");
-                                });
-                        }
+                        cameraRef.current?.takePictureAsync({ quality: 0.5 }).then(photo => {
+                            setCapturedImage(photo.uri);
+                        }).catch(error => {
+                            console.error("Fallo al tomar la foto:", error);
+                            Alert.alert("Error", "No se pudo capturar la foto.");
+                        });
                     }
                 }, 1000);
             }
-
             return () => {
-                if (timer) {
-                    clearInterval(timer);
-                }
+                if (timer) clearInterval(timer);
                 setCountdown(null);
             };
         }, [permission?.granted, capturedImage])
@@ -70,27 +63,71 @@ export default function BiometricScreen() {
     };
 
     const confirmAndRegister = async () => {
-        if (!capturedImage) return;
+        console.log("======================================");
+        console.log("[BIOMETRIC DEBUG] Iniciando confirmación y registro...");
+        console.log("[BIOMETRIC DEBUG] Parámetros recibidos:", { userId, token, isBiometricEnabledStr });
+        console.log(`[BIOMETRIC DEBUG] ¿Biometría ya activada? -> ${isBiometricEnabled}`);
+
+        if (!capturedImage || !userId || !token) {
+            Alert.alert("Error", "Faltan datos para continuar el proceso.");
+            console.error("[BIOMETRIC DEBUG] Faltan datos:", { capturedImage, userId, token });
+            return;
+        }
         setIsLoading(true);
         
         try {
-            const { token, userId } = await AuthService.verifyIdentity(
-                phone!, parseInt(day!, 10), parseInt(month!, 10), parseInt(year!)
-            );
+            console.log(`[BIOMETRIC DEBUG] Paso 1: Solicitando URL de subida para userId: ${userId}`);
+            const { uploadUrl, s3Key } = await AuthService.getUploadUrl(userId, token);
+            console.log(`[BIOMETRIC DEBUG] Paso 1.1: URL recibida. Key: ${s3Key}`);
 
-            const imageBase64 = await FileSystem.readAsStringAsync(capturedImage, {
+            // --- INICIO DE LA LÓGICA DE SUBIDA ROBUSTA ---
+            console.log("[BIOMETRIC DEBUG] Paso 2: Preparando imagen para la subida...");
+
+            const base64 = await FileSystem.readAsStringAsync(capturedImage, {
                 encoding: FileSystem.EncodingType.Base64,
             });
+            
+            const base64Response = await fetch(`data:image/jpeg;base64,${base64}`);
+            const imageBlob = await base64Response.blob();
+            
+            console.log(`[BIOMETRIC DEBUG] Blob de imagen creado. Tamaño: ${imageBlob.size} bytes.`);
+            // --- FIN DE LA LÓGICA DE SUBIDA ROBUSTA ---
 
-            await AuthService.registerFace(userId, imageBase64);
+            console.log("[BIOMETRIC DEBUG] Paso 2.1: Subiendo imagen a S3...");
+            const uploadResponse = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'image/jpeg',
+                    'Content-Length': imageBlob.size.toString(),
+                },
+                body: imageBlob,
+            });
 
-            Alert.alert("¡Éxito!", "Su rostro ha sido registrado correctamente.", [
+            if (!uploadResponse.ok) {
+                const errorText = await uploadResponse.text();
+                console.error("[BIOMETRIC DEBUG] Error de S3:", errorText);
+                throw new Error('Falló la subida de la imagen a nuestro servidor.');
+            }
+            console.log(`[BIOMETRIC DEBUG] Paso 2.2: Imagen subida con éxito.`);
+
+            console.log("[BIOMETRIC DEBUG] Paso 3: Notificando al backend para procesar la imagen...");
+            const processResponse = await AuthService.processFaceImage(
+                userId, 
+                s3Key, 
+                token, 
+                isBiometricEnabled
+            );
+            
+            console.log("[BIOMETRIC DEBUG] Paso 3.1: Respuesta del procesamiento:", processResponse);
+
+            Alert.alert("¡Éxito!", processResponse.message || "Su verificación biométrica ha sido completada.", [
                 { text: "OK", onPress: () => {
                     login(token, userId, true);
                 }}
             ]);
 
         } catch (error: any) {
+            console.error("[BIOMETRIC DEBUG] Error en el flujo:", error.message);
             Alert.alert('Registro Fallido', error.message || 'No se pudo completar el registro.');
             setIsLoading(false);
         }
