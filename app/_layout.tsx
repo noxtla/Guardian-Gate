@@ -97,7 +97,8 @@ function RootLayoutNav() {
           <Stack.Screen key="otc" name="otc" options={{ title: 'Enter Code' }} />,
           <Stack.Screen key="ssn" name="ssn" options={{ title: 'Enter your SSN' }} />,
           <Stack.Screen key="dob" name="dob" options={{ title: 'Date of Birth' }} />,
-          // --- CORRECCIÓN: Se elimina la ruta 'year' que no existe ---
+          // --- CORRECCIÓN ---
+          // Volvemos a tener una sola ruta para el flujo biométrico
           <Stack.Screen key="biometric" name="biometric" options={{ title: 'Biometric Verification' }} />,
         ]
       )}

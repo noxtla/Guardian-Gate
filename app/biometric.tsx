@@ -1,10 +1,10 @@
-// app/biometric.tsx
+// app/biometric.tsx (VERSIÓN FINAL UNIFICADA Y ROBUSTA)
 
 import React, { useState, useRef, useCallback } from 'react';
 import { Alert, View, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Button, Text } from 'react-native';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as FileSystem from 'expo-file-system'; // <-- ¡Importación clave!
+import * as FileSystem from 'expo-file-system';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { globalStyles } from '@/constants/AppStyles';
@@ -27,13 +27,22 @@ export default function BiometricScreen() {
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [countdown, setCountdown] = useState<number | null>(null);
+    const [isCameraReady, setIsCameraReady] = useState(false);
     
     const cameraRef = useRef<CameraView | null>(null);
 
+    const handleCameraReady = () => {
+        if (!isCameraReady) {
+            console.log("Cámara está lista.");
+            setIsCameraReady(true);
+        }
+    };
+    
     useFocusEffect(
         useCallback(() => {
             let timer: ReturnType<typeof setInterval> | undefined;
-            if (permission?.granted && !capturedImage) {
+            // Solo activar la cámara si no hay imagen y la cámara está lista
+            if (permission?.granted && !capturedImage && isCameraReady) {
                 let currentCount = 3;
                 setCountdown(currentCount);
                 timer = setInterval(() => {
@@ -42,8 +51,14 @@ export default function BiometricScreen() {
                     if (currentCount === 0) {
                         clearInterval(timer);
                         setCountdown(null);
-                        cameraRef.current?.takePictureAsync({ quality: 0.5 }).then(photo => {
-                            setCapturedImage(photo.uri);
+                        cameraRef.current?.takePictureAsync({ quality: 0.2 }).then(async (photo) => {
+                            if (!photo || !photo.uri) { throw new Error("Captura fallida."); }
+                            
+                            // Mover archivo a ubicación segura para evitar problemas en Android
+                            const newUri = `${FileSystem.documentDirectory}biometric_${Date.now()}.jpg`;
+                            await FileSystem.moveAsync({ from: photo.uri, to: newUri });
+                            setCapturedImage(newUri); // Actualiza el estado para mostrar la imagen
+
                         }).catch(error => {
                             console.error("Fallo al tomar la foto:", error);
                             Alert.alert("Error", "No se pudo capturar la foto.");
@@ -53,109 +68,83 @@ export default function BiometricScreen() {
             }
             return () => {
                 if (timer) clearInterval(timer);
-                setCountdown(null);
             };
-        }, [permission?.granted, capturedImage])
+        }, [permission?.granted, capturedImage, isCameraReady])
     );
 
     const retakePicture = () => {
         setCapturedImage(null);
+        setIsCameraReady(false); // Forzar a la cámara a reinicializarse
     };
 
     const confirmAndRegister = async () => {
-        console.log("======================================");
-        console.log("[BIOMETRIC DEBUG] Iniciando confirmación y registro...");
-        console.log("[BIOMETRIC DEBUG] Parámetros recibidos:", { userId, token, isBiometricEnabledStr });
-        console.log(`[BIOMETRIC DEBUG] ¿Biometría ya activada? -> ${isBiometricEnabled}`);
-
         if (!capturedImage || !userId || !token) {
-            Alert.alert("Error", "Faltan datos para continuar el proceso.");
-            console.error("[BIOMETRIC DEBUG] Faltan datos:", { capturedImage, userId, token });
+            Alert.alert("Error", "Faltan datos para el registro.");
             return;
         }
         setIsLoading(true);
         
         try {
-            console.log(`[BIOMETRIC DEBUG] Paso 1: Solicitando URL de subida para userId: ${userId}`);
             const { uploadUrl, s3Key } = await AuthService.getUploadUrl(userId, token);
-            console.log(`[BIOMETRIC DEBUG] Paso 1.1: URL recibida. Key: ${s3Key}`);
 
-            // --- INICIO DE LA LÓGICA DE SUBIDA ROBUSTA ---
-            console.log("[BIOMETRIC DEBUG] Paso 2: Preparando imagen para la subida...");
-
-            const base64 = await FileSystem.readAsStringAsync(capturedImage, {
-                encoding: FileSystem.EncodingType.Base64,
-            });
-            
-            const base64Response = await fetch(`data:image/jpeg;base64,${base64}`);
-            const imageBlob = await base64Response.blob();
-            
-            console.log(`[BIOMETRIC DEBUG] Blob de imagen creado. Tamaño: ${imageBlob.size} bytes.`);
-            // --- FIN DE LA LÓGICA DE SUBIDA ROBUSTA ---
-
-            console.log("[BIOMETRIC DEBUG] Paso 2.1: Subiendo imagen a S3...");
-            const uploadResponse = await fetch(uploadUrl, {
-                method: 'PUT',
-                headers: { 
-                    'Content-Type': 'image/jpeg',
-                    'Content-Length': imageBlob.size.toString(),
-                },
-                body: imageBlob,
+            // Usar XMLHttpRequest para la subida, que es más robusto
+            const xhr = new XMLHttpRequest();
+            await new Promise<void>((resolve, reject) => {
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState !== 4) return;
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        resolve();
+                    } else {
+                        reject(new Error(`Error al subir la imagen. Código: ${xhr.status}`));
+                    }
+                };
+                xhr.open('PUT', uploadUrl);
+                xhr.setRequestHeader('Content-Type', 'image/jpeg');
+                xhr.send({ uri: capturedImage, type: 'image/jpeg', name: 'profile.jpg' } as any);
             });
 
-            if (!uploadResponse.ok) {
-                const errorText = await uploadResponse.text();
-                console.error("[BIOMETRIC DEBUG] Error de S3:", errorText);
-                throw new Error('Falló la subida de la imagen a nuestro servidor.');
-            }
-            console.log(`[BIOMETRIC DEBUG] Paso 2.2: Imagen subida con éxito.`);
+            const processResponse = await AuthService.processFaceImage(userId, s3Key, token, isBiometricEnabled);
 
-            console.log("[BIOMETRIC DEBUG] Paso 3: Notificando al backend para procesar la imagen...");
-            const processResponse = await AuthService.processFaceImage(
-                userId, 
-                s3Key, 
-                token, 
-                isBiometricEnabled
-            );
-            
-            console.log("[BIOMETRIC DEBUG] Paso 3.1: Respuesta del procesamiento:", processResponse);
-
-            Alert.alert("¡Éxito!", processResponse.message || "Su verificación biométrica ha sido completada.", [
-                { text: "OK", onPress: () => {
-                    login(token, userId, true);
-                }}
+            Alert.alert("¡Éxito!", processResponse.message || "Verificación completada.", [
+                { text: "OK", onPress: () => login(token, userId, true) }
             ]);
 
         } catch (error: any) {
-            console.error("[BIOMETRIC DEBUG] Error en el flujo:", error.message);
-            Alert.alert('Registro Fallido', error.message || 'No se pudo completar el registro.');
+            Alert.alert('Registro Fallido', error.message || "Un error desconocido ha ocurrido.");
+        } finally {
             setIsLoading(false);
         }
     };
     
     if (!permission) {
-        return <View style={styles.container}><ActivityIndicator size="large" color={Colors.brand.lightBlue} /></View>;
+        // Pedir permiso si aún no se ha determinado
+        return <View style={styles.container}><Button title="Activar Cámara" onPress={requestPermission} /></View>;
     }
 
-    if (!permission.granted) {
-        return (
-            <SafeAreaView style={styles.permissionContainer}>
-                <ThemedText style={globalStyles.authTitle}>Acceso a la cámara</ThemedText>
-                <ThemedText style={globalStyles.infoText}>Para registrar su rostro, necesitamos permiso para usar la cámara.</ThemedText>
-                <Button title="Conceder Permiso" onPress={requestPermission} color={Colors.brand.lightBlue} />
-            </SafeAreaView>
-        );
-    }
+    if (!permission.granted) return (
+        <SafeAreaView style={styles.permissionContainer}>
+            <ThemedText style={globalStyles.authTitle}>Acceso a la cámara</ThemedText>
+            <ThemedText style={globalStyles.infoText}>Para registrar su rostro, necesitamos permiso para usar la cámara.</ThemedText>
+            <Button title="Conceder Permiso" onPress={requestPermission} color={Colors.brand.lightBlue} />
+        </SafeAreaView>
+    );
     
     return (
         <View style={styles.container}>
             <ThemedText style={globalStyles.authTitle}>Registro Facial</ThemedText>
             
             <View style={styles.cameraContainer}>
+                {/* --- LÓGICA CLAVE: RENDERIZADO CONDICIONAL --- */}
+                {/* Si hay una imagen capturada, NO renderizamos CameraView */}
                 {capturedImage ? (
                     <Image source={{ uri: capturedImage }} style={styles.camera} />
                 ) : (
-                    <CameraView style={styles.camera} facing="front" ref={cameraRef}>
+                    <CameraView 
+                        style={styles.camera} 
+                        facing="front" 
+                        ref={cameraRef}
+                        onCameraReady={handleCameraReady}
+                    >
                         {countdown !== null && countdown > 0 && (
                             <View style={styles.countdownOverlay}>
                                 <Text style={styles.countdownText}>{countdown}</Text>
@@ -170,9 +159,8 @@ export default function BiometricScreen() {
             </ThemedText>
 
             <View style={styles.controlsContainer}>
-                {isLoading ? (
-                    <ActivityIndicator size="large" color={Colors.brand.white} />
-                ) : capturedImage ? (
+                {isLoading ? <ActivityIndicator size="large" color={Colors.brand.white} />
+                : capturedImage ? (
                     <View style={styles.previewControls}>
                         <TouchableOpacity style={styles.controlButton} onPress={retakePicture}>
                             <ThemedText style={styles.buttonText}>Repetir</ThemedText>
@@ -199,23 +187,7 @@ const styles = StyleSheet.create({
     controlButton: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 25, backgroundColor: 'rgba(255, 255, 255, 0.2)' },
     confirmButton: { backgroundColor: Colors.brand.lightBlue },
     buttonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
-    countdownOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.3)',
-    },
-    countdownText: {
-        fontSize: 120,
-        color: 'white',
-        fontWeight: 'bold',
-        textShadowColor: 'rgba(0, 0, 0, 0.75)',
-        textShadowOffset: { width: -1, height: 1 },
-        textShadowRadius: 10,
-    },
-    instructionText: {
-        fontSize: 18,
-        color: Colors.brand.white,
-        fontWeight: '600',
-    }
+    countdownOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
+    countdownText: { fontSize: 120, color: 'white', fontWeight: 'bold', textShadowColor: 'rgba(0, 0, 0, 0.75)', textShadowOffset: { width: -1, height: 1 }, textShadowRadius: 10 },
+    instructionText: { fontSize: 18, color: Colors.brand.white, fontWeight: '600' }
 });

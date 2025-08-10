@@ -1,6 +1,11 @@
 // services/authService.ts
+// VERSIÓN FINAL PARA EXPO GO (MANAGED WORKFLOW)
 
 import { apiClient } from './apiClient';
+import * as SecureStore from 'expo-secure-store';
+
+// Clave única para guardar y recuperar el token del almacenamiento seguro del dispositivo.
+const TOKEN_KEY = 'user_auth_token';
 
 // --- INTERFACES DE RESPUESTA DE LA API ---
 
@@ -22,11 +27,9 @@ interface GetUploadUrlResponse {
   s3Key: string;
 }
 
-// Interfaz para la respuesta de processFaceImage (la definimos ahora)
 interface ProcessFaceImageResponse {
     status: 'success';
     message: string;
-    // Podríamos añadir más datos si es necesario, como el estado de la sesión.
 }
 
 
@@ -71,8 +74,6 @@ export const AuthService = {
 
   /**
    * Obtiene una URL pre-firmada de S3 para subir la imagen de perfil.
-   * @param userId El ID del usuario para el cual se genera la URL.
-   * @param token El JWT para autenticar la petición.
    */
   getUploadUrl: async (userId: string, token: string): Promise<{ uploadUrl: string; s3Key: string }> => {
     const response = await apiClient<GetUploadUrlResponse>('', {
@@ -87,10 +88,6 @@ export const AuthService = {
 
   /**
    * Notifica al backend que procese una imagen que ya está en S3.
-   * @param userId El ID del usuario.
-   * @param s3Key La clave del objeto de la imagen en S3.
-   * @param token El JWT para autenticar la petición.
-   * @param isBiometricEnabled Indica al backend si debe registrar o buscar la cara.
    */
   processFaceImage: async (
     userId: string, 
@@ -111,21 +108,53 @@ export const AuthService = {
     return response;
   },
 
-  // --- Funciones de manejo de sesión (a implementar con Keychain) ---
+  // --- INICIO: Funciones de manejo de sesión con expo-secure-store ---
 
+  /**
+   * Guarda el token de autenticación de forma segura en el dispositivo.
+   * @param token El JWT a guardar.
+   */
   setToken: async (token: string): Promise<void> => {
-    // En el futuro: await Keychain.setGenericPassword('userToken', token);
-    console.log('[AuthService] setToken: No implementado aún.');
+    try {
+      await SecureStore.setItemAsync(TOKEN_KEY, token);
+      console.log('[AuthService] Token guardado de forma segura.');
+    } catch (error) {
+      console.error('[AuthService] No se pudo guardar el token:', error);
+      // Opcional: Podrías lanzar el error para que sea manejado por quien llama a la función.
+      // throw new Error("Failed to save token.");
+    }
   },
 
+  /**
+   * Recupera el token de autenticación del almacenamiento seguro.
+   * @returns El token como string, o null si no se encuentra.
+   */
   getToken: async (): Promise<string | null> => {
-    // En el futuro: const credentials = await Keychain.getGenericPassword(); return credentials ? credentials.password : null;
-    console.log('[AuthService] getToken: No implementado.');
-    return null;
+    try {
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      if (token) {
+        console.log('[AuthService] Token recuperado de forma segura.');
+      } else {
+        console.log('[AuthService] No se encontró ningún token en el almacenamiento.');
+      }
+      return token;
+    } catch (error) {
+      console.error('[AuthService] No se pudo recuperar el token:', error);
+      return null;
+    }
   },
 
+  /**
+   * Elimina el token de autenticación del dispositivo para cerrar la sesión.
+   */
   logout: async (): Promise<void> => {
-    // En el futuro: await Keychain.resetGenericPassword();
-    console.log('[AuthService] logout: No implementado.');
+    try {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      console.log('[AuthService] Token eliminado, sesión cerrada.');
+    } catch (error) {
+      console.error('[AuthService] No se pudo eliminar el token:', error);
+    }
   },
+  
+  // --- FIN: Funciones de manejo de sesión ---
 };

@@ -80,15 +80,7 @@ export default function DobScreen() {
     Keyboard.dismiss(); 
     setIsLoading(true);
 
-    // --- INICIO DEL PARCHE DE DEPURACIÓN ---
-    console.log("======================================");
-    console.log("[DOB DEBUG] Iniciando verificación...");
-    console.log(`[DOB DEBUG] Employee ID: ${employeeId}`);
-    console.log(`[DOB DEBUG] Datos seleccionados: Day=${selectedDay}, Month=${selectedMonth}, Year=${year}`);
-    
     const monthToSend = selectedMonth! + 1;
-    console.log(`[DOB DEBUG] Mes a enviar (1-12): ${monthToSend}`);
-    // --- FIN DEL PARCHE DE DEPURACIÓN ---
 
     try {
       const { token, userId, isBiometricEnabled } = await AuthService.verifyIdentity(
@@ -98,17 +90,12 @@ export default function DobScreen() {
           parseInt(year, 10)
       );
       
-      console.log("[DOB DEBUG] Verificación exitosa. Recibido:", { userId, token, isBiometricEnabled });
-      
       await AsyncStorage.removeItem('@auth_fail_attempts');
       
+      console.log(`[DOB] Navegando a /biometric...`);
       router.push({
-        pathname: '/biometric',
+        pathname: '/biometric', // <-- CORRECCIÓN: Volver a apuntar a /biometric
         params: { 
-          phone: 'N/A',
-          month: monthToSend.toString(), 
-          day: selectedDay!.toString(), 
-          year, 
           userId, 
           token,
           isBiometricEnabled: isBiometricEnabled.toString(),
@@ -116,7 +103,7 @@ export default function DobScreen() {
       });
 
     } catch (error: any) {
-      console.error("[DOB DEBUG] Error en la verificación:", error.message);
+      console.error("[DOB] Error en la verificación:", error.message);
       handleFailedAttempt();
     } finally {
       setIsLoading(false);
