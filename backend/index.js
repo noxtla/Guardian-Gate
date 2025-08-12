@@ -1,4 +1,5 @@
-// backend/index.js (VERSIÓN DE DEPURACIÓN FINAL)
+// backend/index.js (VERSIÓN FINAL LIMPIA)
+// Handler para la Google Cloud Function 'auth-handler'
 
 require('dotenv').config();
 const functions = require('@google-cloud/functions-framework');
@@ -26,13 +27,8 @@ async function loadSecrets() {
     try {
         const results = await Promise.all(
             Object.entries(secretsToLoad).map(async ([key, name]) => {
-                try {
-                    const [version] = await secretManagerClient.accessSecretVersion({ name });
-                    return [key, version.payload.data.toString()];
-                } catch (err) {
-                    console.error(`🔴 FALLÓ la carga del secreto: ${key}. Ruta: ${name}`);
-                    throw new Error(`No se pudo acceder al secreto: ${key}. Razón: ${err.message}`);
-                }
+                const [version] = await secretManagerClient.accessSecretVersion({ name });
+                return [key, version.payload.data.toString()];
             })
         );
         const loadedSecrets = Object.fromEntries(results);
@@ -73,7 +69,7 @@ functions.http('auth-handler', async (req, res) => {
         await loadSecrets();
         const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
         const { action } = req.body;
-        console.log(`\n\n--- Nueva Petición --- Acción: ${action}`);
+        console.log(`\n\n--- Petición de Autenticación --- Acción: ${action}`);
 
         if (action === 'check-employee-id') {
             const { employeeId } = req.body;
@@ -123,8 +119,6 @@ functions.http('auth-handler', async (req, res) => {
                 const { FaceRecords } = await rekognitionClient.send(new IndexFacesCommand({ CollectionId: 'guardian_gate_employees', ExternalImageId: userId, Image: imageReference, MaxFaces: 1, QualityFilter: "AUTO" }));
                 if (!FaceRecords || FaceRecords.length === 0) throw new Error('No se detectó un rostro en la imagen.');
                 
-                // ¡¡ATENCIÓN!! Si tu tabla de usuarios no se llama 'employees' o la PK no es 'id', ESTA LÍNEA FALLARÁ.
-                // Cámbiala por los nombres correctos, ej: .from('auth_users')...eq('employee_uuid', userId)
                 const { error: updateError } = await supabase.from('employees').update({ is_biometric_enabled: true }).eq('id', userId);
                 if (updateError) {
                     console.error("Error al actualizar Supabase:", updateError);
@@ -148,11 +142,12 @@ functions.http('auth-handler', async (req, res) => {
                 }
             }
         } else {
-            return res.status(400).send({ error: 'Acción desconocida.' });
+            // Se ha cambiado el mensaje de error para reflejar las acciones esperadas
+            return res.status(400).send({ error: 'Acción de autenticación desconocida.' });
         }
 
     } catch (err) {
-        console.error('--- ERROR GLOBAL CAPTURADO ---', { message: err.message, stack: err.stack });
+        console.error('--- ERROR EN AUTH-HANDLER ---', { message: err.message, stack: err.stack });
         return res.status(500).send({ error: 'Ocurrió un error interno.', details: err.message });
     }
 });

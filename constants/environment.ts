@@ -1,9 +1,18 @@
 // constants/environment.ts
 
-// Esta es ahora la única fuente de verdad para la URL de nuestro backend.
-export const API_BASE_URL = 'https://auth-handler-qlpw77skya-uc.a.run.app';
+// ÚNICA FUENTE DE VERDAD PARA LAS URLS DEL BACKEND
 
-// Mensaje de consola para confirmar que la app está usando la URL correcta al iniciar.
-console.log(`[INFO] Usando API Base URL: ${API_BASE_URL}`);
-
-// El resto del código anterior de n8n o de variables de entorno puede ser eliminado.
+export const API_ENDPOINTS = {
+    // El endpoint para todas las acciones de autenticación y gestión de usuarios
+    AUTH: 'https://auth-handler-qlpw77skya-uc.a.run.app',
+    
+     // URL actualizada con el despliegue exitoso
+    ATTENDANCE: 'https://attendance-handler-qlpw77skya-uc.a.run.app', 
+  };
+  
+  // Mensaje de consola para confirmar que la app está usando los endpoints correctos
+  console.log(`[INFO] Usando API Endpoints:`, API_ENDPOINTS);
+  
+  // IMPORTANTE: Después de desplegar tu nueva función 'attendance-handler',
+  // copia su URL de trigger desde la consola de Google Cloud y pégala arriba
+  // reemplazando 'https://attendance-handler-xxxxxxxx-uc.a.run.app'.
