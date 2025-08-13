@@ -1,4 +1,4 @@
-// backend/index.js (VERSIÓN FINAL LIMPIA)
+// backend/index.js (VERSIÓN FINAL CON CORRECCIÓN DE FECHA)
 // Handler para la Google Cloud Function 'auth-handler'
 
 require('dotenv').config();
@@ -81,16 +81,33 @@ functions.http('auth-handler', async (req, res) => {
         } else if (action === 'verify-identity') {
             const { employeeId, day, month, year } = req.body;
             console.log(`[verify-identity] Verificando:`, { employeeId, day, month, year });
-            const birthDateToVerify = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const { data, error } = await supabase.from('auth_users').select('employee_uuid, is_biometric_enabled').eq('employee_id', parseInt(String(employeeId).trim(), 10)).eq('birth_date', birthDateToVerify).single();
-            if (error && error.code !== 'PGRST116' || !data) {
+
+            // Construimos el inicio y el fin del día en UTC para una comparación robusta.
+            // El constructor de Date en JS usa meses 0-11, por eso hacemos month - 1.
+            const startDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+            const endDate = new Date(Date.UTC(year, month - 1, day + 1, 0, 0, 0));
+
+            const { data, error } = await supabase
+                .from('auth_users')
+                .select('employee_uuid, is_biometric_enabled, employee_name')
+                .eq('employee_id', parseInt(String(employeeId).trim(), 10))
+                // Usamos gte (mayor o igual que) y lt (menor que) para cubrir el día completo.
+                .gte('birth_date', startDate.toISOString())
+                .lt('birth_date', endDate.toISOString())
+                .single();
+
+            if (error || !data) {
                 console.error(`[verify-identity] Fallo en la consulta o no se encontraron datos. Error:`, error);
+                console.log(`Buscando fecha entre: ${startDate.toISOString()} y ${endDate.toISOString()}`);
                 return res.status(403).send({ error: 'Credenciales inválidas.' });
             }
-            const { employee_uuid: userId, is_biometric_enabled: isBiometricEnabled } = data;
-            const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '15m' });
-            console.log(`[verify-identity] Éxito. userId: ${userId}, token generado.`);
-            return res.status(200).send({ status: 'success', token, userId, isBiometricEnabled });
+            
+            const { employee_uuid: userId, is_biometric_enabled: isBiometricEnabled, employee_name: name } = data;
+            const token = jwt.sign({ userId, name }, JWT_SECRET, { expiresIn: '1h' });
+            
+            console.log(`[verify-identity] Éxito. userId: ${userId}, name: ${name}, token generado.`);
+            
+            return res.status(200).send({ status: 'success', token, userId, isBiometricEnabled, name });
 
         } else if (action === 'get-upload-url') {
             const decodedToken = verifyToken(req);
@@ -142,7 +159,6 @@ functions.http('auth-handler', async (req, res) => {
                 }
             }
         } else {
-            // Se ha cambiado el mensaje de error para reflejar las acciones esperadas
             return res.status(400).send({ error: 'Acción de autenticación desconocida.' });
         }
 

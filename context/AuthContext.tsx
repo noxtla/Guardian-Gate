@@ -3,39 +3,42 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { AuthService } from '@/services/authService';
 import { router, SplashScreen } from 'expo-router';
 
-// 1. Define la interfaz para el tipo de datos que se expondrán a través del contexto
+// Interfaz para el objeto de usuario que se almacenará en el estado del contexto.
+interface User {
+  userId: string;
+  hasBiometricsEnabled: boolean;
+  name: string; // El nombre del empleado.
+}
+
+// Interfaz que define la forma del contexto que consumirán los componentes.
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
-  user: { userId: string; hasBiometricsEnabled: boolean } | null;
-  login: (token: string, userId: string, hasBiometricsEnabled: boolean) => Promise<void>;
+  user: User | null;
+  login: (token: string, userId: string, hasBiometricsEnabled: boolean, name: string) => Promise<void>;
   logout: () => Promise<void>;
   updateBiometricsStatus: (status: boolean) => void;
 }
 
-// 2. Crea el contexto con un valor inicial indefinido.
+// Creación del contexto de React.
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// 3. Define el componente AuthProvider que envolverá tu aplicación.
+// El componente Provider que envolverá la aplicación.
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [user, setUser] = useState<{ userId: string; hasBiometricsEnabled: boolean } | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
-  // Efecto para cargar el estado de autenticación al inicio de la aplicación
+  // Efecto para verificar el estado de autenticación al iniciar la app.
   useEffect(() => {
     SplashScreen.preventAutoHideAsync();
-
     const loadAuthStatus = async () => {
       try {
-        // En una app real, aquí se recuperaría y validaría el token.
-        // Por ahora, asumimos que el usuario no está logueado al iniciar.
         const token = await AuthService.getToken();
         if (token) {
-          // Si tuviéramos un endpoint /me, lo llamaríamos aquí para obtener
-          // los datos del usuario y marcarlo como autenticado.
-          // Por ahora, esta lógica se activa solo con un login manual.
-          console.log("Token encontrado, pero la validación automática no está implementada.");
+          // En una app real, aquí se podría decodificar el token para obtener el nombre
+          // y el ID, o llamar a un endpoint /me para validar y obtener datos frescos.
+          // Por ahora, el estado se puebla explícitamente en el login.
         }
       } catch (error) {
         console.error('Falló la carga del estado de autenticación:', error);
@@ -47,34 +50,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loadAuthStatus();
   }, []);
 
-  // Función para iniciar sesión, llamada después de una autenticación exitosa.
-  const login = useCallback(async (token: string, userId: string, hasBiometricsEnabled: boolean) => {
-    // En el futuro, aquí guardaríamos el token en Keychain: await AuthService.setToken(token);
+  // Función para manejar el inicio de sesión.
+  const login = useCallback(async (token: string, userId: string, hasBiometricsEnabled: boolean, name: string) => {
+    await AuthService.setToken(token); // Guarda el token en el almacenamiento seguro.
     setIsAuthenticated(true);
-    setUser({ userId, hasBiometricsEnabled });
-    
-    // [CORRECCIÓN] Se restaura la navegación explícita.
-    // Usamos router.replace para limpiar el historial de autenticación
-    // y evitar que el usuario pueda volver a las pantallas de login.
-    router.replace('/(tabs)');
+    setUser({ userId, hasBiometricsEnabled, name }); // Almacena los datos del usuario en el estado.
+    router.replace('/(tabs)'); // Redirige a la pantalla principal.
   }, []);
 
-  // Función para cerrar sesión.
+  // Función para manejar el cierre de sesión.
   const logout = useCallback(async () => {
-    await AuthService.logout(); // Elimina el token de Keychain
+    await AuthService.logout(); // Elimina el token.
     setIsAuthenticated(false);
-    setUser(null);
-    router.replace('/'); // Redirige a la pantalla de login
+    setUser(null); // Limpia los datos del usuario.
+    router.replace('/'); // Redirige a la pantalla de login.
   }, []);
 
-  // Función para actualizar el estado de biometría en el contexto.
+  // Función para actualizar el estado de la biometría después del registro.
   const updateBiometricsStatus = useCallback((status: boolean) => {
       if (user) {
           setUser(prevUser => (prevUser ? { ...prevUser, hasBiometricsEnabled: status } : null));
       }
   }, [user]);
 
-  // Proveedor del contexto que envuelve a los componentes hijos.
+  // Provee el valor del contexto a los componentes hijos.
   return (
     <AuthContext.Provider value={{ isAuthenticated, isLoadingAuth, user, login, logout, updateBiometricsStatus }}>
       {children}
@@ -82,7 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Hook personalizado para consumir el contexto de autenticación.
+// Hook personalizado para facilitar el consumo del contexto.
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

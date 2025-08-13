@@ -1,9 +1,8 @@
 // services/authService.ts
-// VERSIÓN FINAL PARA EXPO GO (MANAGED WORKFLOW) - CORREGIDO
 
 import { apiClient } from './apiClient';
 import * as SecureStore from 'expo-secure-store';
-import { API_ENDPOINTS } from '@/constants/environment'; // <-- PASO 1: IMPORTAR
+// NO importamos API_ENDPOINTS aquí. El servicio no necesita conocer las URLs.
 
 // Clave única para guardar y recuperar el token del almacenamiento seguro del dispositivo.
 const TOKEN_KEY = 'user_auth_token';
@@ -16,8 +15,8 @@ interface ProcessFaceImageResponse { status: 'success'; message: string; }
 
 export const AuthService = {
   checkEmployeeId: async (employeeId: string): Promise<boolean> => {
-    // PASO 2: USAR EL ENDPOINT CORRECTO
-    const response = await apiClient<CheckEmployeeIdResponse>(API_ENDPOINTS.AUTH, {
+    // PASO 1: Usar la clave del endpoint en lugar de la URL
+    const response = await apiClient<CheckEmployeeIdResponse>('AUTH', {
       body: { action: 'check-employee-id', employeeId },
     });
     return response.userFound;
@@ -29,11 +28,11 @@ export const AuthService = {
     month: number,
     year: number
   ): Promise<{ token: string; userId: string; isBiometricEnabled: boolean }> => {
-    // PASO 3: USAR EL ENDPOINT CORRECTO
-    const response = await apiClient<VerifyIdentityResponse>(API_ENDPOINTS.AUTH, {
+    // PASO 2: Usar la clave del endpoint
+    const response = await apiClient<VerifyIdentityResponse>('AUTH', {
       body: { action: 'verify-identity', employeeId, day, month, year },
     });
-    // PASO 3.1: GUARDAR EL TOKEN
+    // Guardar el token es una responsabilidad de este servicio
     await AuthService.setToken(response.token);
     return { 
         token: response.token, 
@@ -43,8 +42,8 @@ export const AuthService = {
   },
 
   getUploadUrl: async (userId: string, token: string): Promise<{ uploadUrl: string; s3Key: string }> => {
-    // PASO 4: USAR EL ENDPOINT CORRECTO
-    const response = await apiClient<GetUploadUrlResponse>(API_ENDPOINTS.AUTH, {
+    // PASO 3: Usar la clave del endpoint
+    const response = await apiClient<GetUploadUrlResponse>('AUTH', {
       body: { action: 'get-upload-url', userId },
       token: token
     });
@@ -57,8 +56,8 @@ export const AuthService = {
     token: string, 
     isBiometricEnabled: boolean
   ): Promise<ProcessFaceImageResponse> => {
-    // PASO 5: USAR EL ENDPOINT CORRECTO
-    const response = await apiClient<ProcessFaceImageResponse>(API_ENDPOINTS.AUTH, {
+    // PASO 4: Usar la clave del endpoint
+    const response = await apiClient<ProcessFaceImageResponse>('AUTH', {
       body: { action: 'process-face-image', userId, s3Key, isBiometricEnabled },
       token: token
     });

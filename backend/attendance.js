@@ -82,8 +82,8 @@ functions.http('attendance-handler', async (req, res) => {
                     ? new Date(Date.now() + 15 * 60 * 1000).toISOString()
                     : new Date().toISOString(),
                 geofence: {
-                    latitude: 34.0522,
-                    longitude: -118.2437,
+                    latitude: 39.954863,
+                    longitude: -83.127586,
                     radius: 150,
                 },
             };
