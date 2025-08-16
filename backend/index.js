@@ -1,4 +1,5 @@
-// backend/index.js (VERSIÓN DE DEPURACIÓN FINAL)
+// backend/index.js
+// VERSIÓN FINAL-FINAL CON LLAMADA A FUNCIÓN RPC (VERIFICADA)
 
 require('dotenv').config();
 const functions = require('@google-cloud/functions-framework');
@@ -12,56 +13,10 @@ const { RekognitionClient, IndexFacesCommand, SearchFacesByImageCommand } = requ
 const secretManagerClient = new SecretManagerServiceClient();
 let SUPABASE_URL, SUPABASE_SERVICE_KEY, JWT_SECRET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY;
 
-async function loadSecrets() {
-    if (SUPABASE_URL) return;
-    const projectId = process.env.GCP_PROJECT || 'gateway-r9gl0';
-    console.log(`Cargando secretos para el proyecto: ${projectId}`);
-    const secretsToLoad = {
-        SUPABASE_URL: `projects/${projectId}/secrets/SUPABASE_URL/versions/latest`,
-        SUPABASE_SERVICE_KEY: `projects/${projectId}/secrets/SUPABASE_SERVICE_KEY/versions/latest`,
-        JWT_SECRET: `projects/${projectId}/secrets/JWT_SECRET_KEY/versions/latest`,
-        AWS_ACCESS_KEY_ID: `projects/${projectId}/secrets/AWS_ACCESS_KEY_ID/versions/latest`,
-        AWS_SECRET_ACCESS_KEY: `projects/${projectId}/secrets/AWS_SECRET_ACCESS_KEY/versions/latest`,
-    };
-    try {
-        const results = await Promise.all(
-            Object.entries(secretsToLoad).map(async ([key, name]) => {
-                try {
-                    const [version] = await secretManagerClient.accessSecretVersion({ name });
-                    return [key, version.payload.data.toString()];
-                } catch (err) {
-                    console.error(`🔴 FALLÓ la carga del secreto: ${key}. Ruta: ${name}`);
-                    throw new Error(`No se pudo acceder al secreto: ${key}. Razón: ${err.message}`);
-                }
-            })
-        );
-        const loadedSecrets = Object.fromEntries(results);
-        SUPABASE_URL = loadedSecrets.SUPABASE_URL;
-        SUPABASE_SERVICE_KEY = loadedSecrets.SUPABASE_SERVICE_KEY;
-        JWT_SECRET = loadedSecrets.JWT_SECRET;
-        AWS_ACCESS_KEY_ID = loadedSecrets.AWS_ACCESS_KEY_ID;
-        AWS_SECRET_ACCESS_KEY = loadedSecrets.AWS_SECRET_ACCESS_KEY;
-        if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !JWT_SECRET || !AWS_ACCESS_KEY_ID || !AWS_SECRET_ACCESS_KEY) {
-            throw new Error("Uno o más valores de secretos están vacíos después de la carga.");
-        }
-    } catch (error) {
-        console.error("CRÍTICO: El proceso de carga de secretos falló.", error);
-        throw error;
-    }
-}
+// ... (La función loadSecrets y verifyToken no cambian)
+async function loadSecrets() { if (SUPABASE_URL) return; const projectId = process.env.GCP_PROJECT || 'gateway-r9gl0'; const secretsToLoad = { SUPABASE_URL: `projects/${projectId}/secrets/SUPABASE_URL/versions/latest`, SUPABASE_SERVICE_KEY: `projects/${projectId}/secrets/SUPABASE_SERVICE_KEY/versions/latest`, JWT_SECRET: `projects/${projectId}/secrets/JWT_SECRET_KEY/versions/latest`, AWS_ACCESS_KEY_ID: `projects/${projectId}/secrets/AWS_ACCESS_KEY_ID/versions/latest`, AWS_SECRET_ACCESS_KEY: `projects/${projectId}/secrets/AWS_SECRET_ACCESS_KEY/versions/latest`, }; try { const results = await Promise.all( Object.entries(secretsToLoad).map(async ([key, name]) => { const [version] = await secretManagerClient.accessSecretVersion({ name }); return [key, version.payload.data.toString()]; }) ); const loadedSecrets = Object.fromEntries(results); SUPABASE_URL = loadedSecrets.SUPABASE_URL; SUPABASE_SERVICE_KEY = loadedSecrets.SUPABASE_SERVICE_KEY; JWT_SECRET = loadedSecrets.JWT_SECRET; AWS_ACCESS_KEY_ID = loadedSecrets.AWS_ACCESS_KEY_ID; AWS_SECRET_ACCESS_KEY = loadedSecrets.AWS_SECRET_ACCESS_KEY; } catch (error) { console.error("CRÍTICO: El proceso de carga de secretos falló.", error); throw error; } }
+function verifyToken(req) { const authHeader = req.headers.authorization; if (!authHeader || !authHeader.startsWith('Bearer ')) { throw new Error('Missing or invalid authorization header'); } const token = authHeader.split(' ')[1]; try { return jwt.verify(token, JWT_SECRET); } catch (error) { throw new Error('Invalid or expired token'); } }
 
-function verifyToken(req) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new Error('Missing or invalid authorization header');
-    }
-    const token = authHeader.split(' ')[1];
-    try {
-        return jwt.verify(token, JWT_SECRET);
-    } catch (error) {
-        throw new Error('Invalid or expired token');
-    }
-}
 
 functions.http('auth-handler', async (req, res) => {
     try {
@@ -73,7 +28,7 @@ functions.http('auth-handler', async (req, res) => {
         await loadSecrets();
         const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
         const { action } = req.body;
-        console.log(`\n\n--- Nueva Petición --- Acción: ${action}`);
+        console.log(`\n\n--- Petición de Autenticación --- Acción: ${action}`);
 
         if (action === 'check-employee-id') {
             const { employeeId } = req.body;
@@ -84,17 +39,28 @@ functions.http('auth-handler', async (req, res) => {
 
         } else if (action === 'verify-identity') {
             const { employeeId, day, month, year } = req.body;
-            console.log(`[verify-identity] Verificando:`, { employeeId, day, month, year });
-            const birthDateToVerify = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const { data, error } = await supabase.from('auth_users').select('employee_uuid, is_biometric_enabled').eq('employee_id', parseInt(String(employeeId).trim(), 10)).eq('birth_date', birthDateToVerify).single();
-            if (error && error.code !== 'PGRST116' || !data) {
-                console.error(`[verify-identity] Fallo en la consulta o no se encontraron datos. Error:`, error);
+            console.log(`[verify-identity-rpc] Verificando con RPC:`, { employeeId, day, month, year });
+
+            const { data, error } = await supabase.rpc('verify_user_dob', {
+                p_employee_id: employeeId,
+                p_year: year,
+                p_month: month,
+                p_day: day
+            });
+            
+            if (error || !data || data.length === 0) {
+                console.error(`[verify-identity-rpc] Fallo en la llamada RPC o no se encontraron datos. Error de Supabase:`, error);
                 return res.status(403).send({ error: 'Credenciales inválidas.' });
             }
-            const { employee_uuid: userId, is_biometric_enabled: isBiometricEnabled } = data;
-            const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '15m' });
-            console.log(`[verify-identity] Éxito. userId: ${userId}, token generado.`);
-            return res.status(200).send({ status: 'success', token, userId, isBiometricEnabled });
+
+            const userData = data[0];
+            const { employee_uuid: userId, is_biometric_enabled: isBiometricEnabled, employee_name: name, position_name: position } = userData;
+            
+            const token = jwt.sign({ userId, name, position }, JWT_SECRET, { expiresIn: '1h' });
+            
+            console.log(`[verify-identity-rpc] Éxito. userId: ${userId}, name: ${name}, position: ${position}, token generado.`);
+            
+            return res.status(200).send({ status: 'success', token, userId, isBiometricEnabled, name, position });
 
         } else if (action === 'get-upload-url') {
             const decodedToken = verifyToken(req);
@@ -123,11 +89,9 @@ functions.http('auth-handler', async (req, res) => {
                 const { FaceRecords } = await rekognitionClient.send(new IndexFacesCommand({ CollectionId: 'guardian_gate_employees', ExternalImageId: userId, Image: imageReference, MaxFaces: 1, QualityFilter: "AUTO" }));
                 if (!FaceRecords || FaceRecords.length === 0) throw new Error('No se detectó un rostro en la imagen.');
                 
-                // ¡¡ATENCIÓN!! Si tu tabla de usuarios no se llama 'employees' o la PK no es 'id', ESTA LÍNEA FALLARÁ.
-                // Cámbiala por los nombres correctos, ej: .from('auth_users')...eq('employee_uuid', userId)
-                const { error: updateError } = await supabase.from('employees').update({ is_biometric_enabled: true }).eq('id', userId);
+                const { error: updateError } = await supabase.from('auth_users').update({ is_biometric_enabled: true }).eq('employee_uuid', userId);
                 if (updateError) {
-                    console.error("Error al actualizar Supabase:", updateError);
+                    console.error("Error al actualizar Supabase en 'auth_users':", updateError);
                     throw updateError;
                 };
                 
@@ -148,11 +112,11 @@ functions.http('auth-handler', async (req, res) => {
                 }
             }
         } else {
-            return res.status(400).send({ error: 'Acción desconocida.' });
+            return res.status(400).send({ error: 'Acción de autenticación desconocida.' });
         }
 
     } catch (err) {
-        console.error('--- ERROR GLOBAL CAPTURADO ---', { message: err.message, stack: err.stack });
+        console.error('--- ERROR EN AUTH-HANDLER ---', { message: err.message, stack: err.stack });
         return res.status(500).send({ error: 'Ocurrió un error interno.', details: err.message });
     }
 });

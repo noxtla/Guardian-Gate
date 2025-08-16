@@ -13,7 +13,6 @@ import {
   Alert,
   ActivityIndicator,
   Keyboard,
-  Platform,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { globalStyles } from '@/constants/AppStyles';
@@ -83,7 +82,8 @@ export default function DobScreen() {
     const monthToSend = selectedMonth! + 1;
 
     try {
-      const { token, userId, isBiometricEnabled } = await AuthService.verifyIdentity(
+      // 1. OBTENER TODOS LOS DATOS DEL USUARIO, INCLUYENDO 'name' Y 'position'
+      const { token, userId, isBiometricEnabled, name, position } = await AuthService.verifyIdentity(
           employeeId!, 
           selectedDay!, 
           monthToSend,
@@ -92,13 +92,17 @@ export default function DobScreen() {
       
       await AsyncStorage.removeItem('@auth_fail_attempts');
       
-      console.log(`[DOB] Navegando a /biometric...`);
+      console.log(`[DOB] Navegando a /biometric con name: ${name} y position: ${position}`);
+      
+      // 2. PASAR TODOS LOS DATOS COMO PARÁMETROS A LA SIGUIENTE PANTALLA
       router.push({
-        pathname: '/biometric', // <-- CORRECCIÓN: Volver a apuntar a /biometric
+        pathname: '/biometric',
         params: { 
           userId, 
           token,
           isBiometricEnabled: isBiometricEnabled.toString(),
+          name,
+          position,
         },
       });
 

@@ -94,8 +94,6 @@ function RootLayoutNav() {
       ) : (
         [
           <Stack.Screen key="index" name="index" options={{ title: 'Guardian Gate' }} />,
-          <Stack.Screen key="otc" name="otc" options={{ title: 'Enter Code' }} />,
-          <Stack.Screen key="ssn" name="ssn" options={{ title: 'Enter your SSN' }} />,
           <Stack.Screen key="dob" name="dob" options={{ title: 'Date of Birth' }} />,
           // --- CORRECCIÓN ---
           // Volvemos a tener una sola ruta para el flujo biométrico
