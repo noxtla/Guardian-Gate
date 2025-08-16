@@ -1,21 +1,29 @@
 // services/authService.ts
+// INICIO DEL ARCHIVO COMPLETO Y VERIFICADO
 
 import { apiClient } from './apiClient';
 import * as SecureStore from 'expo-secure-store';
-// NO importamos API_ENDPOINTS aquí. El servicio no necesita conocer las URLs.
 
-// Clave única para guardar y recuperar el token del almacenamiento seguro del dispositivo.
 const TOKEN_KEY = 'user_auth_token';
 
 // --- INTERFACES DE RESPUESTA DE LA API ---
 interface CheckEmployeeIdResponse { status: 'success'; userFound: boolean; }
-interface VerifyIdentityResponse { status: 'success'; token: string; userId: string; isBiometricEnabled: boolean; }
+
+// La interfaz ya es correcta, define lo que la API devuelve.
+interface VerifyIdentityResponse { 
+  status: 'success'; 
+  token: string; 
+  userId: string; 
+  isBiometricEnabled: boolean;
+  name: string;
+  position: string;
+}
+
 interface GetUploadUrlResponse { status: 'success'; uploadUrl: string; s3Key: string; }
 interface ProcessFaceImageResponse { status: 'success'; message: string; }
 
 export const AuthService = {
   checkEmployeeId: async (employeeId: string): Promise<boolean> => {
-    // PASO 1: Usar la clave del endpoint en lugar de la URL
     const response = await apiClient<CheckEmployeeIdResponse>('AUTH', {
       body: { action: 'check-employee-id', employeeId },
     });
@@ -27,22 +35,24 @@ export const AuthService = {
     day: number,
     month: number,
     year: number
-  ): Promise<{ token: string; userId: string; isBiometricEnabled: boolean }> => {
-    // PASO 2: Usar la clave del endpoint
+  // ***** LA CORRECCIÓN CLAVE ESTÁ AQUÍ *****
+  // 1. AÑADIR 'position' AL TIPO DE RETORNO DE LA PROMESA
+  ): Promise<{ token: string; userId: string; isBiometricEnabled: boolean; name: string; position: string }> => {
     const response = await apiClient<VerifyIdentityResponse>('AUTH', {
       body: { action: 'verify-identity', employeeId, day, month, year },
     });
-    // Guardar el token es una responsabilidad de este servicio
-    await AuthService.setToken(response.token);
+    
+    // 2. AHORA EL OBJETO DEVUELTO COINCIDE CON LA FIRMA DE LA FUNCIÓN
     return { 
         token: response.token, 
         userId: response.userId, 
-        isBiometricEnabled: response.isBiometricEnabled 
+        isBiometricEnabled: response.isBiometricEnabled,
+        name: response.name,
+        position: response.position
     };
   },
 
   getUploadUrl: async (userId: string, token: string): Promise<{ uploadUrl: string; s3Key: string }> => {
-    // PASO 3: Usar la clave del endpoint
     const response = await apiClient<GetUploadUrlResponse>('AUTH', {
       body: { action: 'get-upload-url', userId },
       token: token
@@ -56,15 +66,13 @@ export const AuthService = {
     token: string, 
     isBiometricEnabled: boolean
   ): Promise<ProcessFaceImageResponse> => {
-    // PASO 4: Usar la clave del endpoint
     const response = await apiClient<ProcessFaceImageResponse>('AUTH', {
       body: { action: 'process-face-image', userId, s3Key, isBiometricEnabled },
       token: token
     });
     return response;
   },
-
-  // --- Las funciones de manejo de sesión no cambian ---
+  
   setToken: async (token: string): Promise<void> => {
     try {
       await SecureStore.setItemAsync(TOKEN_KEY, token);
@@ -98,3 +106,5 @@ export const AuthService = {
     }
   },
 };
+
+// FIN DEL ARCHIVO COMPLETO Y VERIFICADO
