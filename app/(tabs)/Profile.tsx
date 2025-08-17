@@ -1,5 +1,4 @@
 // app/(tabs)/Profile.tsx
-// INICIO DEL ARCHIVO COMPLETO Y FINAL
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -14,24 +13,31 @@ import {
   View,
   Platform,
   Alert,
-  ActivityIndicator, // Importar ActivityIndicator para el estado de carga
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+// [1] IMPORTAR EL HOOK useAuth
 import { useAuth } from '@/context/AuthContext';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   
-  // 1. OBTENER LOS DATOS REALES DEL USUARIO Y EL ESTADO DE CARGA DEL CONTEXTO
+  // [2] OBTENER user, logout, y isLoadingAuth DEL CONTEXTO
   const { user, logout, isLoadingAuth } = useAuth();
 
+  // [3] CREAR LA FUNCIÓN QUE MANEJA EL EVENTO DE PRESIONAR EL BOTÓN
   const handleSignOut = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Sign Out", onPress: async () => { await logout(); }, style: "destructive" },
-    ]);
+    Alert.alert(
+      "Sign Out", 
+      "Are you sure you want to sign out?", 
+      [
+        { text: "Cancel", style: "cancel" },
+        // Al presionar "Sign Out", se llama a la función logout del contexto
+        { text: "Sign Out", onPress: () => logout(), style: "destructive" },
+      ]
+    );
   };
 
   const handleEditProfile = () => {
@@ -50,7 +56,6 @@ export default function ProfileScreen() {
     </View>
   );
 
-  // 2. MOSTRAR UN INDICADOR DE CARGA MIENTRAS EL CONTEXTO SE HIDRATA O SI NO HAY DATOS DEL USUARIO
   if (isLoadingAuth || !user) {
     return (
         <ThemedView style={[globalStyles.lightScreenContainer, styles.loadingContainer]}>
@@ -64,23 +69,22 @@ export default function ProfileScreen() {
     <ThemedView style={globalStyles.lightScreenContainer}>
       {renderHeader()}
       <FlatList
-        data={[]} // La lista es solo un contenedor para el header que es scrolleable
+        data={[]}
         renderItem={() => null}
         keyExtractor={(item, index) => index.toString()}
         ListHeaderComponent={
           <View style={styles.contentPadding}>
-            {/* 3. PASAR LOS DATOS REALES DEL USUARIO AL COMPONENTE ProfileHeader */}
             <ProfileHeader 
               name={user.name} 
-              username={user.userId} // Puedes usar userId o employeeId si lo añades al contexto
-              position={user.position} 
-              // avatarSource se podría manejar en el futuro
+              username={user.userId.split('-')[0]} // Muestra una parte del UUID como username
+              position={user.position}
             />
             
             <TouchableOpacity style={globalStyles.editProfileButton} onPress={handleEditProfile}>
               <ThemedText style={globalStyles.editProfileButtonText}>EDIT PROFILE</ThemedText>
             </TouchableOpacity>
             
+            {/* [4] CONECTAR handleSignOut AL EVENTO onPress DEL BOTÓN */}
             <TouchableOpacity style={[globalStyles.primaryButton, styles.signOutButton]} onPress={handleSignOut}>
               <IconSymbol name="door.right.hand.open.fill" size={20} color={Colors.brand.white} style={styles.signOutIcon} />
               <ThemedText style={globalStyles.primaryButtonText}>Sign Out</ThemedText>
@@ -96,10 +100,10 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   loadingContainer: { 
-    flex: 1, // Asegura que ocupe toda la pantalla
+    flex: 1,
     justifyContent: 'center', 
     alignItems: 'center',
-    gap: 10, // Espacio entre el spinner y el texto
+    gap: 10,
   },
   headerContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15, paddingBottom: 15, backgroundColor: Colors.brand.white, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.brand.lightGray },
   menuIconPlaceholder: { padding: 5 },
@@ -117,5 +121,3 @@ const styles = StyleSheet.create({
   },
   signOutIcon: { marginRight: 5 },
 });
-
-// FIN DEL ARCHIVO COMPLETO Y FINAL

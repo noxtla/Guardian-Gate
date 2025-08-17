@@ -48,19 +48,14 @@ export default function DobScreen() {
 
   const isFormComplete = selectedMonth !== null && selectedDay !== null && year.length === 4;
   let isDateValid = false;
-  let isContinueDisabled = true;
-
   if (isFormComplete) {
     const today = new Date();
     const dob = new Date(parseInt(year), selectedMonth!, selectedDay!);
     const minAgeDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
     const maxAgeDate = new Date(today.getFullYear() - 90, today.getMonth(), today.getDate());
-    isDateValid = 
-      dob.getFullYear() === parseInt(year) &&
-      dob <= minAgeDate &&
-      dob >= maxAgeDate;
+    isDateValid = dob.getFullYear() === parseInt(year) && dob <= minAgeDate && dob >= maxAgeDate;
   }
-  isContinueDisabled = !isFormComplete || !isDateValid || isLoading;
+  const isContinueDisabled = !isFormComplete || !isDateValid || isLoading;
 
   useFocusEffect(
     React.useCallback(() => {
@@ -82,7 +77,7 @@ export default function DobScreen() {
     const monthToSend = selectedMonth! + 1;
 
     try {
-      // 1. OBTENER TODOS LOS DATOS DEL USUARIO, INCLUYENDO 'name' Y 'position'
+      // La obtención del deviceId ahora está encapsulada dentro de verifyIdentity
       const { token, userId, isBiometricEnabled, name, position } = await AuthService.verifyIdentity(
           employeeId!, 
           selectedDay!, 
@@ -94,21 +89,28 @@ export default function DobScreen() {
       
       console.log(`[DOB] Navegando a /biometric con name: ${name} y position: ${position}`);
       
-      // 2. PASAR TODOS LOS DATOS COMO PARÁMETROS A LA SIGUIENTE PANTALLA
       router.push({
         pathname: '/biometric',
-        params: { 
-          userId, 
-          token,
-          isBiometricEnabled: isBiometricEnabled.toString(),
-          name,
-          position,
-        },
+        params: { userId, token, isBiometricEnabled: isBiometricEnabled.toString(), name, position },
       });
 
     } catch (error: any) {
       console.error("[DOB] Error en la verificación:", error.message);
-      handleFailedAttempt();
+      
+      // --- INICIO DE LA MODIFICACIÓN CLAVE ---
+      // Manejo específico del error de dispositivo ya vinculado
+      if (error.message.includes('bound to another device')) {
+        Alert.alert(
+          'Dispositivo Vinculado',
+          'Esta cuenta ya está registrada en otro dispositivo. Por favor, contacte a un administrador para desvincular su cuenta anterior.',
+          [{ text: 'Entendido', onPress: () => router.replace('/') }]
+        );
+      } else {
+        // Si el error es por credenciales incorrectas, maneja los intentos fallidos
+        handleFailedAttempt();
+      }
+      // --- FIN DE LA MODIFICACIÓN CLAVE ---
+      
     } finally {
       setIsLoading(false);
     }

@@ -1,4 +1,6 @@
 // app/index.tsx
+// VERSIÓN FINAL CON LÓGICA BIOMÉTRICA COMPLETA Y LLAMADA AL ENDPOINT /me
+
 import React, { useState, useCallback } from 'react';
 import {
   StyleSheet,
@@ -13,12 +15,13 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { Colors } from '@/constants/Colors';
 import { globalStyles } from '@/constants/AppStyles';
 import { AuthService } from '@/services/authService';
+import { BiometricService } from '@/services/biometricService';
 import { useAuth } from '@/context/AuthContext'; 
 
 export default function GuardianGateScreen() {
@@ -27,17 +30,26 @@ export default function GuardianGateScreen() {
   const [isInputVisible, setIsInputVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false); 
   const [isLoadingFaceId, setIsLoadingFaceId] = useState(false); 
+  const [isBiometricLoginAvailable, setIsBiometricLoginAvailable] = useState(false);
 
   const { login } = useAuth(); 
 
+  // Se ejecuta cada vez que la pantalla obtiene el foco
+  useFocusEffect(
+    useCallback(() => {
+      const checkBiometricStatus = async () => {
+        const isEnabled = await AuthService.getBiometricRegistrationStatus();
+        console.log(`[IndexScreen] Biometric login enabled flag: ${isEnabled}`);
+        setIsBiometricLoginAvailable(isEnabled);
+      };
+      checkBiometricStatus();
+    }, [])
+  );
+
   const handleIdChange = useCallback((id: string) => {
     const numericId = id.replace(/[^0-9]/g, '');
-    
-    // --- LÍNEA CORREGIDA ---
     const trimmedId = numericId.substring(0, 12);
-    
     setEmployeeId(trimmedId);
-    
     setIsIdValid(trimmedId.length >= 6 && trimmedId.length <= 12);
   }, []);
 
@@ -46,25 +58,21 @@ export default function GuardianGateScreen() {
       setIsInputVisible(true);
       return;
     }
-
     if (!isIdValid || isLoading) return;
-
     Keyboard.dismiss();
     setIsLoading(true);
-    
     try {
-      const userFound = await AuthService.checkEmployeeId(employeeId);
-
-      if (userFound) {
-        console.log('Empleado encontrado. Procediendo...');
-        router.push({ pathname: '/dob', params: { employeeId: employeeId } }); 
+      // La llamada a checkEmployeeId es una pre-verificación para dar feedback rápido
+      const userExists = await AuthService.checkEmployeeId(employeeId);
+      if (userExists) {
+        // Pasamos el control a la siguiente pantalla
+        router.push({ pathname: '/dob', params: { employeeId } }); 
       } else {
-        Alert.alert(
-          'Acceso Denegado',
-          'El ID de empleado no está registrado o no se encuentra activo.'
-        );
+        Alert.alert('Acceso Denegado', 'El ID de empleado no está registrado o no se encuentra activo.');
       }
     } catch (error: any) {
+      // El error de "dispositivo vinculado" se manejará en la pantalla 'dob'
+      // donde realmente se llama a verifyIdentity.
       Alert.alert('Error', error.message || 'No se pudo conectar con el servidor.');
     } finally {
       setIsLoading(false);
@@ -72,14 +80,38 @@ export default function GuardianGateScreen() {
   };
 
   const handleFaceIdLogin = async () => {
-    console.log('Attempting FaceId login...');
     setIsLoadingFaceId(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      await login('dummy-faceid-token', 'faceid-user-123', true);
-      router.replace('/(tabs)');
-    } catch (error) {
+      const isAuthenticatedOnDevice = await BiometricService.authenticateWithBiometrics('Inicia sesión en Guardian Gate');
+      
+      if (isAuthenticatedOnDevice) {
+        console.log('Biometric auth successful. Calling getMe...');
+        
+        // Obtenemos los datos frescos del perfil desde el backend
+        const userProfile = await AuthService.getMe();
+        const token = await AuthService.getToken();
+
+        if (userProfile && token) {
+          console.log('getMe successful. Logging in with profile:', userProfile);
+          // Usamos los datos reales y actualizados para el login
+          await login(
+            token, 
+            userProfile.userId, 
+            userProfile.isBiometricEnabled,
+            userProfile.name, 
+            userProfile.position
+          );
+          // Navegamos al área principal de la app
+          router.replace('/(tabs)');
+        } else {
+            Alert.alert('Error', 'No se pudieron recuperar las credenciales completas. Por favor, inicia sesión manualmente.');
+        }
+      } else {
+        console.log('Biometric authentication failed or was cancelled by user.');
+      }
+    } catch (error: any) {
       console.error('Error during FaceId login:', error);
+      Alert.alert('Error de Autenticación', `No se pudo iniciar sesión: ${error.message}`);
     } finally {
       setIsLoadingFaceId(false);
     }
@@ -109,24 +141,15 @@ export default function GuardianGateScreen() {
                     autoFocus
                   />
                   <TouchableOpacity
-                    style={[
-                      globalStyles.primaryButton,
-                      (!isIdValid || isLoading) && globalStyles.disabledButton,
-                    ]}
+                    style={[globalStyles.primaryButton, (!isIdValid || isLoading) && globalStyles.disabledButton]}
                     disabled={!isIdValid || isLoading}
                     onPress={handleContinue}>
-                    {isLoading ? (
-                      <ActivityIndicator color={Colors.brand.white} />
-                    ) : (
-                      <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>
-                    )}
+                    {isLoading ? <ActivityIndicator color={Colors.brand.white} /> : <ThemedText style={globalStyles.primaryButtonText}>Continue</ThemedText>}
                   </TouchableOpacity>
                 </>
               ) : (
                 <>
-                  <TouchableOpacity
-                    style={globalStyles.primaryButton}
-                    onPress={handleContinue}>
+                  <TouchableOpacity style={globalStyles.primaryButton} onPress={handleContinue}>
                     <ThemedText style={globalStyles.primaryButtonText}>
                       Enter your Employee ID
                     </ThemedText>
@@ -135,9 +158,9 @@ export default function GuardianGateScreen() {
                   <TouchableOpacity
                     style={[
                       globalStyles.primaryButton,
-                      isLoadingFaceId && globalStyles.disabledButton,
+                      (!isBiometricLoginAvailable || isLoadingFaceId) && globalStyles.disabledButton,
                     ]}
-                    disabled={isLoadingFaceId}
+                    disabled={!isBiometricLoginAvailable || isLoadingFaceId}
                     onPress={handleFaceIdLogin}
                   >
                     {isLoadingFaceId ? (
