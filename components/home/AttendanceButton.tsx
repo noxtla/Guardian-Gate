@@ -1,41 +1,24 @@
-// components/home/AttendanceButton.tsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { Colors } from '@/constants/Colors';
 import * as Haptics from 'expo-haptics';
+import { RFValue } from 'react-native-responsive-fontsize';
 
-// --- INTERFACES Y TIPOS (sin cambios) ---
+// --- INTERFACES AND LOGIC ---
 interface AttendanceStatus {
   serverTimeUTC: string;
   isWindowOpen: boolean;
   windowEndTimeUTC: string;
-  geofence: {
-    latitude: number;
-    longitude: number;
-    radius: number;
-  };
+  geofence: { latitude: number; longitude: number; radius: number };
 }
-
-interface Props {
-  status: AttendanceStatus;
-  onPress: () => void;
-}
-
-// --- LÓGICA DE ESTADO VISUAL (sin cambios) ---
+interface Props { status: AttendanceStatus; onPress: () => void; }
 const getButtonAppearance = (timeLeft: number) => {
-  if (timeLeft > 600) { // > 10 minutos
-    return { backgroundColor: '#2E7D32', textColor: Colors.brand.white }; // Verde
-  }
-  if (timeLeft > 300) { // > 5 minutos
-    return { backgroundColor: '#F9A825', textColor: Colors.brand.darkBlue }; // Amarillo
-  }
-  if (timeLeft > 0) { // < 5 minutos
-    return { backgroundColor: '#D32F2F', textColor: Colors.brand.white }; // Rojo
-  }
-  return { backgroundColor: Colors.brand.darkGray, textColor: Colors.brand.gray }; // Expirado/Inactivo
+  if (timeLeft > 600) { return { backgroundColor: '#2E7D32', textColor: Colors.brand.white }; }
+  if (timeLeft > 300) { return { backgroundColor: '#F9A825', textColor: Colors.brand.darkBlue }; }
+  if (timeLeft > 0) { return { backgroundColor: '#D32F2F', textColor: Colors.brand.white }; }
+  return { backgroundColor: Colors.brand.darkGray, textColor: Colors.brand.gray };
 };
-
 const formatTime = (totalSeconds: number): string => {
   if (totalSeconds < 0) return "00:00";
   const minutes = Math.floor(totalSeconds / 60);
@@ -43,7 +26,7 @@ const formatTime = (totalSeconds: number): string => {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
-// --- COMPONENTE PRINCIPAL (sin cambios en la lógica) ---
+// --- COMPONENT IMPLEMENTATION ---
 export const AttendanceButton: React.FC<Props> = ({ status, onPress }) => {
   const [timeLeft, setTimeLeft] = useState(0);
 
@@ -52,12 +35,10 @@ export const AttendanceButton: React.FC<Props> = ({ status, onPress }) => {
       setTimeLeft(0);
       return;
     }
-
     const serverTime = new Date(status.serverTimeUTC);
     const endTime = new Date(status.windowEndTimeUTC);
     const initialTimeLeft = Math.round((endTime.getTime() - serverTime.getTime()) / 1000);
     setTimeLeft(initialTimeLeft);
-
     const timer = setInterval(() => {
       setTimeLeft(prevTime => {
         const newTime = prevTime - 1;
@@ -67,9 +48,7 @@ export const AttendanceButton: React.FC<Props> = ({ status, onPress }) => {
         return newTime;
       });
     }, 1000);
-
     return () => clearInterval(timer);
-
   }, [status]);
 
   const appearance = getButtonAppearance(timeLeft);
@@ -79,19 +58,29 @@ export const AttendanceButton: React.FC<Props> = ({ status, onPress }) => {
   return (
     <TouchableOpacity
       style={[
-        styles.container, // Usaremos los nuevos estilos
+        styles.container,
         { backgroundColor: appearance.backgroundColor },
         isDisabled && styles.disabled,
       ]}
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.8} // Un poco más sutil para un área grande
+      activeOpacity={0.8}
     >
-      <ThemedText style={[styles.mainText, { color: appearance.textColor }]}>
+      <ThemedText
+        style={[styles.mainText, { color: appearance.textColor }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+      >
         {isDisabled ? 'Attendance Closed' : 'Check-in'}
       </ThemedText>
       {!isDisabled && (
-         <ThemedText style={[styles.timerText, { color: appearance.textColor }]}>
+        <ThemedText
+          style={[styles.timerText, { color: appearance.textColor }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+        >
           {timeFormatted}
         </ThemedText>
       )}
@@ -99,31 +88,31 @@ export const AttendanceButton: React.FC<Props> = ({ status, onPress }) => {
   );
 };
 
-// --- ESTILOS (NUEVO DISEÑO RECTANGULAR) ---
+// --- STYLES ---
 const styles = StyleSheet.create({
   container: {
-    // PASO 1: Ocupar todo el espacio disponible, sin dimensiones fijas.
     flex: 1,
-    // PASO 2: Eliminar el borde y el borderRadius circular. Heredará el del gridItem.
-    // El borderRadius se aplica en el contenedor padre en HomeScreen.
-    justifyContent: 'space-between', // Distribuye el espacio entre los elementos
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 20, // Padding interno generoso
+    padding: RFValue(12), // Ajustado para mejor espaciado
+    width: '100%',
+    height: '100%',
+    borderRadius: RFValue(20), // Bordes suaves
   },
   disabled: {
     opacity: 0.65,
   },
   mainText: {
-    // PASO 3: Estilo para el texto superior "Check-in"
-    fontSize: 18,
+    alignSelf: 'flex-start',
+    fontSize: RFValue(16),
     fontFamily: 'OpenSans-SemiBold',
-    alignSelf: 'flex-start', // Alineado a la izquierda dentro del padding
+    marginBottom: RFValue(8),
   },
   timerText: {
-    // PASO 4: Fuente grande y audaz para el temporizador. Ahora tenemos espacio.
-    fontSize: 56,
+    fontSize: RFValue(40),
     fontFamily: 'SpaceMono',
     textAlign: 'center',
-    // El justifyContent: 'space-between' del contenedor lo centrará verticalmente
+    flexShrink: 1,
+    width: '100%',
   },
 });

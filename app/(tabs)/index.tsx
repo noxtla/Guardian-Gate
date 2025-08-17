@@ -1,6 +1,5 @@
-// app/(tabs)/index.tsx
 import React, { useState, useCallback } from 'react';
-import { Alert, ActivityIndicator, View, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { Alert, ActivityIndicator, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -12,21 +11,28 @@ import { Colors } from '@/constants/Colors';
 import { AttendanceService, AttendanceStatusResponse } from '@/services/attendanceService';
 import { IconSymbol, IconSymbolName } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/context/AuthContext';
+import { RFValue } from 'react-native-responsive-fontsize';
 
 // --- Componentes de UI ---
 interface GridItemData {
   id: string;
-  title: string;
-  icon: IconSymbolName;
+  title?: string;
+  icon?: IconSymbolName;
   isSpecial?: boolean;
   action?: () => void;
+  type?: 'item' | 'placeholder';
 }
 
 const VehicleGridItem = ({ item }: { item: GridItemData }) => (
   <TouchableOpacity style={styles.gridItem} onPress={item.action}>
-    <IconSymbol name={item.icon} size={50} color={Colors.brand.darkBlue} />
+    <IconSymbol name={item.icon!} size={50} color={Colors.brand.darkBlue} />
     <ThemedText style={styles.gridItemText}>{item.title}</ThemedText>
   </TouchableOpacity>
+);
+
+// --- ANNOTATION A: This component is specifically for placeholders ---
+const PlaceholderGridItem = () => (
+    <View style={[styles.gridItem, styles.placeholderGridItem]} />
 );
 
 const SuccessState = ({ time }: { time: string }) => (
@@ -44,10 +50,8 @@ export default function HomeScreen() {
   const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatusResponse | null>(null);
   const [checkInTime, setCheckInTime] = useState<string | null>(null);
   
-  // Obtiene el objeto de usuario (que incluye el nombre) desde el AuthContext.
   const { user } = useAuth();
 
-  // Carga el estado de la asistencia cada vez que la pantalla obtiene el foco.
   const loadAttendanceStatus = useCallback(() => {
     setIsLoading(true);
     setCheckInTime(null); 
@@ -64,7 +68,6 @@ export default function HomeScreen() {
 
   useFocusEffect(loadAttendanceStatus);
 
-  // Maneja la lógica de presionar el botón de check-in.
   const handleCheckIn = useCallback(async () => {
     if (!attendanceStatus) return;
     setIsProcessingCheckIn(true);
@@ -102,17 +105,15 @@ export default function HomeScreen() {
     }
   }, [attendanceStatus]);
 
-  // Datos para la cuadrícula del dashboard.
-  const gridData: GridItemData[] = [
-    { id: 'attendance', title: 'Attendance', icon: 'person.badge.clock.fill', isSpecial: true },
-    { id: 'vehicles', title: 'Vehicles', icon: 'car.fill', action: () => Alert.alert("Vehicles", "Navigate to Vehicles screen") },
-  ];
+  // --- ANNOTATION B: This function decides which component to render ---
+  const renderGridItem = (item: GridItemData) => {
+    if (item.type === 'placeholder') {
+        return <PlaceholderGridItem key={item.id} />;
+    }
 
-  // Función que decide qué renderizar para cada ítem de la cuadrícula.
-  const renderGridItem = ({ item }: { item: GridItemData }) => {
     if (item.isSpecial) {
       return (
-        <View style={styles.gridItem}>
+        <View style={styles.gridItem} key={item.id}>
           {attendanceStatus ? (
             <>
               {isProcessingCheckIn && (
@@ -129,10 +130,10 @@ export default function HomeScreen() {
         </View>
       );
     }
-    return <VehicleGridItem item={item} />;
+    
+    return <VehicleGridItem item={item} key={item.id} />;
   };
   
-  // Orquestador principal del contenido de la pantalla.
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -146,19 +147,41 @@ export default function HomeScreen() {
     if (checkInTime) {
       return <SuccessState time={checkInTime} />;
     }
+    
+    // --- ANNOTATION C: The data drives the UI ---
+    const gridData: GridItemData[] = [
+      { id: 'attendance', title: 'Attendance', icon: 'person.badge.clock.fill', isSpecial: true, type: 'item' },
+      { id: 'vehicles', title: 'Vehicles', icon: 'car.fill', action: () => Alert.alert("Vehicles", "Navigate to Vehicles screen"), type: 'item' },
+      { id: 'placeholder-1', type: 'placeholder' },
+      { id: 'placeholder-2', type: 'placeholder' },
+      { id: 'placeholder-3', type: 'placeholder' },
+      { id: 'placeholder-4', type: 'placeholder' },
+    ];
 
     return (
       <View style={styles.dashboardContainer}>
-        <ThemedText style={styles.welcomeMessage}>
-          Hola, {user?.name || 'Empleado'}
+        <ThemedText 
+          style={styles.welcomeMessage}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {user?.name || 'Empleado'}
         </ThemedText>
-        <FlatList
-          data={gridData}
-          renderItem={renderGridItem}
-          keyExtractor={item => item.id}
-          numColumns={2}
-          contentContainerStyle={styles.gridContainer}
-        />
+        
+        <View style={styles.gridContainer}>
+            <View style={styles.gridRow}>
+                {renderGridItem(gridData[0])}
+                {renderGridItem(gridData[1])}
+            </View>
+            <View style={styles.gridRow}>
+                {renderGridItem(gridData[2])}
+                {renderGridItem(gridData[3])}
+            </View>
+            <View style={styles.gridRow}>
+                {renderGridItem(gridData[4])}
+                {renderGridItem(gridData[5])}
+            </View>
+        </View>
       </View>
     );
   };
@@ -170,7 +193,6 @@ export default function HomeScreen() {
   );
 }
 
-// --- Estilos ---
 const styles = StyleSheet.create({
     fullScreenCentered: {
         flex: 1,
@@ -185,49 +207,61 @@ const styles = StyleSheet.create({
         zIndex: 10,
         borderRadius: 20,
     },
-    loadingText: { color: Colors.brand.white, marginTop: 15, fontSize: 16 },
-    successTitle: { fontSize: 32, fontWeight: 'bold', color: '#2E7D32', fontFamily: 'OpenSans-SemiBold' },
-    successSubtitle: { fontSize: 16, color: Colors.brand.darkGray, textAlign: 'center' },
+    loadingText: { color: Colors.brand.white, marginTop: RFValue(15), fontSize: RFValue(16) },
+    successTitle: { fontSize: RFValue(32), fontWeight: 'bold', color: '#2E7D32', fontFamily: 'OpenSans-SemiBold' },
+    successSubtitle: { fontSize: RFValue(16), color: Colors.brand.darkGray, textAlign: 'center' },
     dashboardContainer: {
       flex: 1,
     },
     welcomeMessage: {
-      fontSize: 28,
+      fontSize: RFValue(28),
       fontWeight: 'bold',
       color: Colors.brand.darkBlue,
       fontFamily: 'OpenSans-SemiBold',
-      paddingHorizontal: 20,
-      paddingTop: 20,
-      paddingBottom: 10,
+      paddingHorizontal: RFValue(20),
+      paddingTop: RFValue(20),
+      paddingBottom: RFValue(10),
+      textAlign: 'center',
+      numberOfLines: 1,
+      adjustsFontSizeToFit: true,
+      minimumFontScale: 0.7,
     },
     gridContainer: {
-      flexGrow: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 10,
+      flex: 1,
+      flexDirection: 'column', 
+      padding: RFValue(10),
+    },
+    gridRow: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
     },
     gridItem: {
-      width: 160,
-      height: 200,
-      margin: 10,
+      flex: 1,
+      margin: RFValue(10),
       borderRadius: 20,
       backgroundColor: Colors.brand.white,
       justifyContent: 'center',
       alignItems: 'center',
-      padding: 0, 
       shadowColor: "#000",
-      shadowOffset: { width: 0, height: 4, },
+      shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.1,
       shadowRadius: 5,
       elevation: 8,
-      overflow: 'hidden',
+      overflow: 'visible',
+      aspectRatio: 1,
     },
     gridItemText: {
       position: 'absolute',
-      bottom: 20,
-      fontSize: 18,
+      bottom: RFValue(20),
+      fontSize: RFValue(18),
       fontWeight: '600',
       color: Colors.brand.darkBlue,
       fontFamily: 'OpenSans-SemiBold',
+    },
+    placeholderGridItem: {
+        backgroundColor: Colors.brand.lightGray,
+        shadowOpacity: 0,
+        elevation: 0,
     },
 });
