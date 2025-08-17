@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { Colors } from '@/constants/Colors';
 import * as Haptics from 'expo-haptics';
 import { RFValue } from 'react-native-responsive-fontsize';
 
-// --- INTERFACES AND LOGIC ---
+// --- INTERFACES AND LOGIC (Sin cambios) ---
 interface AttendanceStatus {
   serverTimeUTC: string;
   isWindowOpen: boolean;
@@ -26,15 +26,12 @@ const formatTime = (totalSeconds: number): string => {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
-// --- COMPONENT IMPLEMENTATION ---
+// --- COMPONENT IMPLEMENTATION (Sin cambios en la lógica) ---
 export const AttendanceButton: React.FC<Props> = ({ status, onPress }) => {
   const [timeLeft, setTimeLeft] = useState(0);
 
   useEffect(() => {
-    if (!status.isWindowOpen) {
-      setTimeLeft(0);
-      return;
-    }
+    if (!status.isWindowOpen) { setTimeLeft(0); return; }
     const serverTime = new Date(status.serverTimeUTC);
     const endTime = new Date(status.windowEndTimeUTC);
     const initialTimeLeft = Math.round((endTime.getTime() - serverTime.getTime()) / 1000);
@@ -57,62 +54,65 @@ export const AttendanceButton: React.FC<Props> = ({ status, onPress }) => {
 
   return (
     <TouchableOpacity
-      style={[
-        styles.container,
-        { backgroundColor: appearance.backgroundColor },
-        isDisabled && styles.disabled,
-      ]}
+      style={[ styles.container, { backgroundColor: appearance.backgroundColor }, isDisabled && styles.disabled ]}
       onPress={onPress}
       disabled={isDisabled}
       activeOpacity={0.8}
     >
-      <ThemedText
-        style={[styles.mainText, { color: appearance.textColor }]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.7}
-      >
+      <ThemedText style={[styles.mainText, { color: appearance.textColor }]}>
         {isDisabled ? 'Attendance Closed' : 'Check-in'}
       </ThemedText>
+      
+      {/* [CAMBIO] Envolvemos el cronómetro en una View para centrarlo en el espacio restante */}
       {!isDisabled && (
-        <ThemedText
-          style={[styles.timerText, { color: appearance.textColor }]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.7}
-        >
-          {timeFormatted}
-        </ThemedText>
+        <View style={styles.timerContainer}>
+          <ThemedText
+            style={[styles.timerText, { color: appearance.textColor }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {timeFormatted}
+          </ThemedText>
+        </View>
       )}
     </TouchableOpacity>
   );
 };
 
-// --- STYLES ---
+// --- STYLES (Aquí están las correcciones clave) ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    // [CORRECCIÓN] Alineamos el contenido desde arriba y añadimos padding
+    justifyContent: 'flex-start', 
     alignItems: 'center',
-    padding: RFValue(12), // Ajustado para mejor espaciado
+    padding: RFValue(15),
     width: '100%',
     height: '100%',
-    borderRadius: RFValue(20), // Bordes suaves
+    borderRadius: RFValue(20),
   },
   disabled: {
     opacity: 0.65,
   },
   mainText: {
-    alignSelf: 'flex-start',
-    fontSize: RFValue(16),
+    // [CORRECCIÓN] El texto del título se alinea solo y tiene un margen definido
+    alignSelf: 'stretch', // Ocupa todo el ancho para poder centrar el texto
+    textAlign: 'center',
+    fontSize: RFValue(18),
     fontFamily: 'OpenSans-SemiBold',
-    marginBottom: RFValue(8),
+    marginBottom: RFValue(8), // Pequeño espacio antes del cronómetro
+  },
+  // [NUEVO] Contenedor para el cronómetro que ocupa el espacio restante
+  timerContainer: {
+    flex: 1, // Ocupa todo el espacio vertical disponible
+    justifyContent: 'center', // Centra el cronómetro verticalmente en este espacio
+    alignItems: 'center', // Centra el cronómetro horizontalmente
+    width: '100%',
   },
   timerText: {
-    fontSize: RFValue(40),
+    fontSize: RFValue(48), // Podemos hacerlo un poco más grande
     fontFamily: 'SpaceMono',
     textAlign: 'center',
-    flexShrink: 1,
-    width: '100%',
   },
 });
